@@ -4,12 +4,12 @@
 
 四个模块，各自独立、可单独使用：
 
-| # | 模块 | 干什么 | 状态 |
-|---|---|---|---|
-| ① | [`hardening/`](hardening/) | **题目加难管线** —— 对 Terminal-Bench 2.1 的题做环境演化，造出"下一代"，并测量难度差 | ✅ 已实现 |
-| ② | [`envgen/`](envgen/) | **环境层构造** —— 从 workspace 快照合成 Event Log（工作历史）与 Collection Map（集合地图） | ✅ 已搬入 |
-| ③ | [`workspace_eval/`](workspace_eval/) | **跑 workspace 实验的入口** —— 把 agent 放进 workspace 跑任务，用 rubric 判分 | ✅ 代码已搬入（数据未搬） |
-| ④ | [`curate/`](curate/) | **跑环境模型的入口** —— 让微调模型当 workspace 构造器，从文件池里选可信文件重建环境 | ✅ 已搬入 |
+| # | 模块 | 干什么 |
+|---|---|---|
+| ① | [`hardening/`](hardening/) | **题目加难管线** —— 对 Terminal-Bench 2.1 的题做环境演化，造出"下一代"，并测量难度差 |
+| ② | [`envgen/`](envgen/) | **环境层构造** —— 从 workspace 快照合成 Event Log（工作历史）与 Collection Map（集合地图） |
+| ③ | [`workspace_eval/`](workspace_eval/) | **跑 workspace 实验的入口** —— 把 agent 放进 workspace 跑任务，用 rubric 判分 |
+| ④ | [`curate/`](curate/) | **跑环境模型的入口** —— 让微调模型当 workspace 构造器，从文件池里选可信文件重建环境 |
 
 ## 它们怎么连起来
 
@@ -47,18 +47,15 @@
 | 模块 | 怎么用 agentkit |
 |---|---|
 | ① hardening | `eval_task.py` / `gen_task.py` 直接用 |
-| ② envgen | `src/workspace_env/agentkit_runner.py` —— 实现上游的 `ENVGEN_RUNNER` 契约 |
+| ② envgen | `src/workspace_env/agentkit_runner.py` —— 实现 envgen 的 `ENVGEN_RUNNER` 契约 |
 | ③ workspace_eval | `src/agents/agentkit.py` —— 实现它的 harness 契约（`harness: agentkit`） |
 | ④ curate | 经模块 ③ 的 runner |
 
-## 各模块的代码来源
+## 环境要求
 
-| 模块 | 来源 |
-|---|---|
-| ① hardening | 本仓自建（原 `terminal-bench-v4` 的加难管线，已自包含） |
-| ② envgen | `Workspace-Bench/envgen-kit`（独立工程，整包平移） |
-| ③ workspace_eval | `Workspace-Bench/evaluation`（搬代码，数据 125GB 未搬） |
-| ④ curate | `Workspace-Bench/evaluation/scripts/` 的 curator 链路 |
+- **Docker** + `docker compose` v2 —— 实验在容器里跑，四个模块都要
+- **一个模型端点** —— 各模块不内置端点，需自行提供（见下方「约定」）
+- **Python 3.11+** —— 各模块的依赖声明情况见其 README
 
 ## 约定
 
@@ -68,8 +65,8 @@
   默认值保持中性（开源要求）。
 - **产物不进版本库**：见 `.gitignore`，各模块的 `runs/` `output/` `.generated/` 都忽略。
 
-## 开放事项
+## 许可
 
-- ②③④ 的代码尚未搬入（见各模块 README 的"待搬的文件"）。
 - ① 的语料 `hardening/tasks-tb21/` 是 **Terminal-Bench 2.1** 的题，带 canary GUID、
-  上游未附 LICENSE —— 再分发前需确认上游许可；本仓自身的 LICENSE 也尚未确定。
+  上游未附 LICENSE —— 再分发前需确认上游许可。
+- 本仓自身的 LICENSE 尚未确定。

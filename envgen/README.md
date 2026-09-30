@@ -3,8 +3,8 @@
 从任意 workspace 快照生成 **Event Log**（工作历史事件流）与 **Collection Map**（集合地图）。
 让一片目录看起来像"曾经有人工作过"，供下游的任务与评测使用。
 
-这是 env-rethink 的模块 ②。主体是从上游 **envgen-kit** 整包搬来的（本目录的
-`PROVENANCE.json` 记着每个文件的来源与源文件 sha256）。
+这是 env-rethink 的模块 ②。本目录的 `PROVENANCE.json` 记录每个文件的来源与源文件 sha256，
+用于审计这个包是否被改动过。
 
 ## 在本仓怎么跑
 

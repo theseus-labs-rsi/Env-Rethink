@@ -3,8 +3,6 @@
 把一个 workspace（任务 + 文件集）交给 agent 跑，跑完用 rubric 判分。
 这是**测量端**：`envgen` 造的环境、`hardening` 造的题、`curate` 选的选集，都在这里出分数。
 
-**状态：骨架。代码待从 `Workspace-Bench/evaluation` 搬入。**
-
 ## 顶层入口
 
 ```bash
@@ -12,7 +10,7 @@ python3 scripts/run_experiment.py --config <experiment.yaml>
 ```
 
 YAML 描述一批 case（harness × model × dataset × condition）；不给参数时脚本会打印一份
-带注释的模板。格式说明见上游 `docs/yaml_experiment_runner.md`。
+带注释的模板。格式说明见 `docs/yaml_experiment_runner.md`。
 
 ## 链路
 
@@ -86,19 +84,19 @@ export TB_BASE_URL=... TB_API_KEY=... TB_MODEL=...    # 模型连接（api_provi
 写交付物，产物正确同步回宿主。返回值与 `src/agents/codex.py` 同形，`agent_runner.py` 不用改。
 
 
-## 计划中的内容
+## 目录结构
 
-| 目录 | 内容 | 来源 |
-|---|---|---|
-| `scripts/run_experiment.py` | **顶层入口**：建实验、跑、判、落产物 | `evaluation/scripts/` |
-| `scripts/run_strict_task_config.py` | 起严格 allowlist 容器 | 同上 |
-| `src/agent_runner.py` | agent 执行核心（准备 workspace → 跑 agent → 收产物） | `evaluation/src/` |
-| `src/task_container_entry.py` | 容器内 entrypoint | 同上 |
-| `src/agents/` | 5 个 harness 适配器 | `evaluation/src/agents/` |
-| `src/agent_as_a_judge.py` `src/agent_eval.py` | rubric 判分 | `evaluation/src/` |
-| `src/workspace_services/` | workspace 服务 sidecar（WeCom / mail 等） | `evaluation/src/workspace_services/` |
-| `docker/` | harness 容器（Office 镜像） | `evaluation/docker/` |
-| `configs/` `experiments/` | 运行配置与产物 | `evaluation/{configs,experiments}/` |
+| 路径 | 内容 |
+|---|---|
+| `scripts/run_experiment.py` | **顶层入口**：建实验、跑、判、落产物 |
+| `scripts/run_strict_task_config.py` | 起严格 allowlist 容器 |
+| `src/agent_runner.py` | agent 执行核心（准备 workspace → 跑 agent → 收产物） |
+| `src/task_container_entry.py` | 容器内 entrypoint |
+| `src/agents/` | harness 适配器（`claudecode` / `codex` / `deepagent` / `deepseekharness` / `openclaw` / `agentkit`） |
+| `src/agent_as_a_judge.py` `src/agent_eval.py` | rubric 判分 |
+| `src/workspace_services/` | workspace 服务 sidecar（WeCom / mail 等） |
+| `docker/` | harness 容器（Office 镜像） |
+| `configs/` `experiments/` | 运行配置与产物 |
 
 ## 运行后端是插件（不在公开树）
 
