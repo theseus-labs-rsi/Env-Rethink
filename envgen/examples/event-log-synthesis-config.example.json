@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "run_id": "workspace-context-preexp-001",
+  "repetition_id": 1,
+  "workspace_root": "/absolute/path/to/workspace",
+  "output_root": "/absolute/path/to/new-artifact-directory",
+  "model": "gpt-5.4",
+  "auth_mode": "chatgpt",
+  "base_url": null,
+  "expected_codex_version": "0.144.5",
+  "timeout_seconds": 600.0,
+  "workspace_view_mode": "isolated_masked_copy",
+  "shared_workspace_snapshot_hash": null,
+  "mask_rate": 0.5,
+  "target_file_coverage": 0.1,
+  "max_b_failures_per_candidate": 2,
+  "max_candidate_slots": 20,
+  "random_seed": 17,
+  "selection_policy": "untargeted",
+  "preferred_files": [],
+  "rubric_contexts": [],
+  "stop_after_accepted_candidates": null
+}

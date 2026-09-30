@@ -1,0 +1,2453 @@
+{
+  "$defs": {
+    "ContentLocator": {
+      "discriminator": {
+        "mapping": {
+          "line": "#/$defs/LineLocator",
+          "page": "#/$defs/PageLocator",
+          "paragraph": "#/$defs/ParagraphLocator",
+          "region": "#/$defs/RegionLocator",
+          "sheet_range": "#/$defs/SheetRangeLocator",
+          "slide": "#/$defs/SlideLocator",
+          "time_range": "#/$defs/TimeRangeLocator",
+          "whole_file": "#/$defs/WholeFileLocator"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/LineLocator"
+        },
+        {
+          "$ref": "#/$defs/ParagraphLocator"
+        },
+        {
+          "$ref": "#/$defs/PageLocator"
+        },
+        {
+          "$ref": "#/$defs/SlideLocator"
+        },
+        {
+          "$ref": "#/$defs/SheetRangeLocator"
+        },
+        {
+          "$ref": "#/$defs/RegionLocator"
+        },
+        {
+          "$ref": "#/$defs/TimeRangeLocator"
+        },
+        {
+          "$ref": "#/$defs/WholeFileLocator"
+        }
+      ]
+    },
+    "EventAction": {
+      "enum": [
+        "session.start",
+        "session.end",
+        "folder.create",
+        "folder.move",
+        "folder.rename",
+        "folder.delete",
+        "file.download",
+        "file.import",
+        "file.open",
+        "file.preview",
+        "file.read",
+        "file.create",
+        "file.write",
+        "file.save",
+        "file.copy",
+        "file.move",
+        "file.rename",
+        "file.export",
+        "file.extract",
+        "file.link",
+        "file.delete",
+        "file.restore",
+        "shell.command"
+      ],
+      "title": "EventAction",
+      "type": "string"
+    },
+    "EventObject": {
+      "additionalProperties": false,
+      "properties": {
+        "mime_type": {
+          "anyOf": [
+            {
+              "maxLength": 255,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mime Type"
+        },
+        "object_id": {
+          "pattern": "^obj_[a-z][a-z0-9]{15,63}$",
+          "title": "Object Id",
+          "type": "string"
+        },
+        "path_at_event": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Path At Event",
+          "type": "string"
+        },
+        "revision_id": {
+          "anyOf": [
+            {
+              "pattern": "^rev_[a-z][a-z0-9]{15,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision Id"
+        }
+      },
+      "required": [
+        "object_id",
+        "path_at_event"
+      ],
+      "title": "EventObject",
+      "type": "object"
+    },
+    "LineLocator": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "minimum": 1,
+          "title": "End",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "line",
+          "title": "Kind",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 1,
+          "title": "Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "start",
+        "end"
+      ],
+      "title": "LineLocator",
+      "type": "object"
+    },
+    "PageLocator": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "minimum": 1,
+          "title": "End",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "page",
+          "title": "Kind",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 1,
+          "title": "Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "start",
+        "end"
+      ],
+      "title": "PageLocator",
+      "type": "object"
+    },
+    "ParagraphLocator": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "minimum": 1,
+          "title": "End",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "paragraph",
+          "title": "Kind",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 1,
+          "title": "Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "start",
+        "end"
+      ],
+      "title": "ParagraphLocator",
+      "type": "object"
+    },
+    "PublicProvenance": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "generation_method": {
+                "const": "agent_inference"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "synthetic": {
+                "const": true
+              },
+              "transition_basis": {
+                "const": "agent_inference"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "generation_method": {
+                "const": "snapshot_observation"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "content_basis": {
+                "const": "workspace_metadata"
+              },
+              "synthetic": {
+                "const": true
+              },
+              "temporal_basis": {
+                "const": "synthetic_timestamp"
+              },
+              "transition_basis": {
+                "const": "not_applicable"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "generation_method": {
+                "const": "trace_conversion"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "content_basis": {
+                "const": "trace_record"
+              },
+              "synthetic": {
+                "const": false
+              },
+              "temporal_basis": {
+                "const": "observed_timestamp"
+              },
+              "transition_basis": {
+                "const": "trace_record"
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "content_basis": {
+          "enum": [
+            "workspace_content",
+            "workspace_metadata",
+            "trace_record",
+            "agent_inference",
+            "not_applicable"
+          ],
+          "title": "Content Basis",
+          "type": "string"
+        },
+        "generation_method": {
+          "enum": [
+            "agent_inference",
+            "snapshot_observation",
+            "trace_conversion"
+          ],
+          "title": "Generation Method",
+          "type": "string"
+        },
+        "synthetic": {
+          "title": "Synthetic",
+          "type": "boolean"
+        },
+        "temporal_basis": {
+          "enum": [
+            "observed_timestamp",
+            "filesystem_timestamp",
+            "synthetic_timestamp"
+          ],
+          "title": "Temporal Basis",
+          "type": "string"
+        },
+        "transition_basis": {
+          "enum": [
+            "trace_record",
+            "agent_inference",
+            "synthetic_transition",
+            "not_applicable"
+          ],
+          "title": "Transition Basis",
+          "type": "string"
+        }
+      },
+      "required": [
+        "synthetic",
+        "generation_method",
+        "content_basis",
+        "transition_basis",
+        "temporal_basis"
+      ],
+      "title": "PublicProvenance",
+      "type": "object"
+    },
+    "RegionLocator": {
+      "additionalProperties": false,
+      "properties": {
+        "coordinate_space": {
+          "enum": [
+            "points",
+            "pixels"
+          ],
+          "title": "Coordinate Space",
+          "type": "string"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "number"
+        },
+        "kind": {
+          "const": "region",
+          "title": "Kind",
+          "type": "string"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "number"
+        },
+        "x": {
+          "minimum": 0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "minimum": 0,
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "x",
+        "y",
+        "width",
+        "height",
+        "coordinate_space"
+      ],
+      "title": "RegionLocator",
+      "type": "object"
+    },
+    "SheetRangeLocator": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "sheet_range",
+          "title": "Kind",
+          "type": "string"
+        },
+        "range": {
+          "pattern": "^[A-Za-z]{1,3}[1-9][0-9]*:[A-Za-z]{1,3}[1-9][0-9]*$",
+          "title": "Range",
+          "type": "string"
+        },
+        "sheet": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Sheet",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "sheet",
+        "range"
+      ],
+      "title": "SheetRangeLocator",
+      "type": "object"
+    },
+    "SlideLocator": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "minimum": 1,
+          "title": "End",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "slide",
+          "title": "Kind",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 1,
+          "title": "Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "start",
+        "end"
+      ],
+      "title": "SlideLocator",
+      "type": "object"
+    },
+    "TimeRangeLocator": {
+      "additionalProperties": false,
+      "properties": {
+        "end_seconds": {
+          "exclusiveMinimum": 0,
+          "title": "End Seconds",
+          "type": "number"
+        },
+        "kind": {
+          "const": "time_range",
+          "title": "Kind",
+          "type": "string"
+        },
+        "start_seconds": {
+          "minimum": 0,
+          "title": "Start Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "start_seconds",
+        "end_seconds"
+      ],
+      "title": "TimeRangeLocator",
+      "type": "object"
+    },
+    "WholeFileLocator": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "whole_file",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "WholeFileLocator",
+      "type": "object"
+    }
+  },
+  "$id": "https://workspace-bench.local/schema/context-event-log-v2.json",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "session.start"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "application_context": {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 8,
+                "minItems": 1,
+                "title": "Application Context",
+                "type": "array"
+              },
+              "narrative": {
+                "anyOf": [
+                  {
+                    "maxLength": 1600,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Narrative"
+              },
+              "title": {
+                "anyOf": [
+                  {
+                    "maxLength": 240,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Title"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "application_context"
+            ],
+            "title": "SessionStartPayload",
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "session.end"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "duration_seconds": {
+                "minimum": 0,
+                "title": "Duration Seconds",
+                "type": "integer"
+              },
+              "status": {
+                "enum": [
+                  "completed",
+                  "abandoned",
+                  "interrupted"
+                ],
+                "title": "Status",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "status",
+              "duration_seconds"
+            ],
+            "title": "SessionEndPayload",
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "folder.create"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "title": "Path",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "title": "FolderCreatePayload",
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "folder.move"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "destination_path": {
+                "title": "Destination Path",
+                "type": "string"
+              },
+              "source_path": {
+                "title": "Source Path",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "source_path",
+              "destination_path"
+            ],
+            "title": "FolderMovePayload",
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "folder.rename"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "path_after": {
+                "title": "Path After",
+                "type": "string"
+              },
+              "path_before": {
+                "title": "Path Before",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "path_before",
+              "path_after"
+            ],
+            "title": "FolderRenamePayload",
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "folder.delete"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "deletion_kind": {
+                "enum": [
+                  "trash",
+                  "permanent"
+                ],
+                "title": "Deletion Kind",
+                "type": "string"
+              },
+              "path_before": {
+                "title": "Path Before",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "path_before",
+              "deletion_kind"
+            ],
+            "title": "FolderDeletePayload",
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.download"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "destination_path": {
+                "title": "Destination Path",
+                "type": "string"
+              },
+              "source_kind": {
+                "enum": [
+                  "web",
+                  "email_attachment",
+                  "shared_drive",
+                  "other"
+                ],
+                "title": "Source Kind",
+                "type": "string"
+              },
+              "source_label": {
+                "anyOf": [
+                  {
+                    "maxLength": 240,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Source Label"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "source_kind",
+              "destination_path"
+            ],
+            "title": "FileDownloadPayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.import"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "source_kind": {
+                "enum": [
+                  "email_attachment",
+                  "shared_drive",
+                  "local_transfer",
+                  "generated_by_application",
+                  "other"
+                ],
+                "title": "Source Kind",
+                "type": "string"
+              },
+              "source_label": {
+                "anyOf": [
+                  {
+                    "maxLength": 240,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Source Label"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "source_kind"
+            ],
+            "title": "FileImportPayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.open"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "application": {
+                "maxLength": 240,
+                "minLength": 1,
+                "title": "Application",
+                "type": "string"
+              },
+              "observation": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "metadata_only",
+                      "content_available"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Observation"
+              },
+              "open_mode": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "read_only",
+                      "read_write"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Open Mode"
+              },
+              "size_bytes": {
+                "anyOf": [
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Size Bytes"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "application"
+            ],
+            "title": "FileOpenPayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.preview"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "locator": {
+                "discriminator": {
+                  "mapping": {
+                    "line": "#/$defs/LineLocator",
+                    "page": "#/$defs/PageLocator",
+                    "paragraph": "#/$defs/ParagraphLocator",
+                    "region": "#/$defs/RegionLocator",
+                    "sheet_range": "#/$defs/SheetRangeLocator",
+                    "slide": "#/$defs/SlideLocator",
+                    "time_range": "#/$defs/TimeRangeLocator",
+                    "whole_file": "#/$defs/WholeFileLocator"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/LineLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/ParagraphLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/PageLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/SlideLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/SheetRangeLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/RegionLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/TimeRangeLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/WholeFileLocator"
+                  }
+                ],
+                "title": "Locator"
+              },
+              "observed_excerpt": {
+                "anyOf": [
+                  {
+                    "maxLength": 1600,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Observed Excerpt"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "locator"
+            ],
+            "title": "FilePreviewPayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.read"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "excerpt": {
+                "maxLength": 1600,
+                "title": "Excerpt",
+                "type": "string"
+              },
+              "locator": {
+                "discriminator": {
+                  "mapping": {
+                    "line": "#/$defs/LineLocator",
+                    "page": "#/$defs/PageLocator",
+                    "paragraph": "#/$defs/ParagraphLocator",
+                    "region": "#/$defs/RegionLocator",
+                    "sheet_range": "#/$defs/SheetRangeLocator",
+                    "slide": "#/$defs/SlideLocator",
+                    "time_range": "#/$defs/TimeRangeLocator",
+                    "whole_file": "#/$defs/WholeFileLocator"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/LineLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/ParagraphLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/PageLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/SlideLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/SheetRangeLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/RegionLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/TimeRangeLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/WholeFileLocator"
+                  }
+                ],
+                "title": "Locator"
+              },
+              "observation": {
+                "anyOf": [
+                  {
+                    "maxLength": 1600,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Observation"
+              },
+              "purpose": {
+                "anyOf": [
+                  {
+                    "maxLength": 1600,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Purpose"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "locator",
+              "excerpt"
+            ],
+            "title": "FileReadPayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.create"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "creation_method": {
+                "maxLength": 240,
+                "minLength": 1,
+                "title": "Creation Method",
+                "type": "string"
+              },
+              "initial_excerpt": {
+                "anyOf": [
+                  {
+                    "maxLength": 1600,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Initial Excerpt"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "creation_method"
+            ],
+            "title": "FileCreatePayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.write"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "anyOf": [
+              {
+                "properties": {
+                  "after_excerpt": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "after_excerpt"
+                ]
+              },
+              {
+                "properties": {
+                  "diff_excerpt": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "diff_excerpt"
+                ]
+              }
+            ],
+            "properties": {
+              "after_excerpt": {
+                "anyOf": [
+                  {
+                    "maxLength": 1600,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "After Excerpt"
+              },
+              "before_excerpt": {
+                "anyOf": [
+                  {
+                    "maxLength": 1600,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Before Excerpt"
+              },
+              "diff_excerpt": {
+                "anyOf": [
+                  {
+                    "maxLength": 1600,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Diff Excerpt"
+              },
+              "locator": {
+                "discriminator": {
+                  "mapping": {
+                    "line": "#/$defs/LineLocator",
+                    "page": "#/$defs/PageLocator",
+                    "paragraph": "#/$defs/ParagraphLocator",
+                    "region": "#/$defs/RegionLocator",
+                    "sheet_range": "#/$defs/SheetRangeLocator",
+                    "slide": "#/$defs/SlideLocator",
+                    "time_range": "#/$defs/TimeRangeLocator",
+                    "whole_file": "#/$defs/WholeFileLocator"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/LineLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/ParagraphLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/PageLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/SlideLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/SheetRangeLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/RegionLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/TimeRangeLocator"
+                  },
+                  {
+                    "$ref": "#/$defs/WholeFileLocator"
+                  }
+                ],
+                "title": "Locator"
+              },
+              "summary": {
+                "anyOf": [
+                  {
+                    "maxLength": 1600,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Summary"
+              },
+              "write_mode": {
+                "enum": [
+                  "insert",
+                  "append",
+                  "replace",
+                  "overwrite"
+                ],
+                "title": "Write Mode",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "write_mode",
+              "locator"
+            ],
+            "title": "FileWritePayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.save"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "application": {
+                "maxLength": 240,
+                "minLength": 1,
+                "title": "Application",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "application"
+            ],
+            "title": "FileSavePayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.copy"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "destination_object_id": {
+                "pattern": "^obj_[a-z][a-z0-9]{15,63}$",
+                "title": "Destination Object Id",
+                "type": "string"
+              },
+              "destination_path": {
+                "title": "Destination Path",
+                "type": "string"
+              },
+              "source_object_id": {
+                "pattern": "^obj_[a-z][a-z0-9]{15,63}$",
+                "title": "Source Object Id",
+                "type": "string"
+              },
+              "source_path": {
+                "title": "Source Path",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "source_object_id",
+              "destination_object_id",
+              "source_path",
+              "destination_path"
+            ],
+            "title": "FileCopyPayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.move"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "destination_path": {
+                "title": "Destination Path",
+                "type": "string"
+              },
+              "source_path": {
+                "title": "Source Path",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "source_path",
+              "destination_path"
+            ],
+            "title": "FileMovePayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.rename"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "path_after": {
+                "title": "Path After",
+                "type": "string"
+              },
+              "path_before": {
+                "title": "Path Before",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "path_before",
+              "path_after"
+            ],
+            "title": "FileRenamePayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.export"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "destination_object_id": {
+                "pattern": "^obj_[a-z][a-z0-9]{15,63}$",
+                "title": "Destination Object Id",
+                "type": "string"
+              },
+              "destination_path": {
+                "title": "Destination Path",
+                "type": "string"
+              },
+              "format": {
+                "maxLength": 240,
+                "minLength": 1,
+                "title": "Format",
+                "type": "string"
+              },
+              "source_object_id": {
+                "pattern": "^obj_[a-z][a-z0-9]{15,63}$",
+                "title": "Source Object Id",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "source_object_id",
+              "destination_object_id",
+              "destination_path",
+              "format"
+            ],
+            "title": "FileExportPayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.extract"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "destination_directory": {
+                "title": "Destination Directory",
+                "type": "string"
+              },
+              "source_object_id": {
+                "pattern": "^obj_[a-z][a-z0-9]{15,63}$",
+                "title": "Source Object Id",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "source_object_id",
+              "destination_directory"
+            ],
+            "title": "FileExtractPayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.link"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "link_path": {
+                "title": "Link Path",
+                "type": "string"
+              },
+              "target_object_id": {
+                "pattern": "^obj_[a-z][a-z0-9]{15,63}$",
+                "title": "Target Object Id",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "target_object_id",
+              "link_path"
+            ],
+            "title": "FileLinkPayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.delete"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "deletion_kind": {
+                "enum": [
+                  "trash",
+                  "permanent"
+                ],
+                "title": "Deletion Kind",
+                "type": "string"
+              },
+              "path_before": {
+                "title": "Path Before",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "path_before",
+              "deletion_kind"
+            ],
+            "title": "FileDeletePayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "file.restore"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "object": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "restore_path": {
+                "title": "Restore Path",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "restore_path"
+            ],
+            "title": "FileRestorePayload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "shell.command"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "command": {
+                "maxLength": 1600,
+                "minLength": 1,
+                "title": "Command",
+                "type": "string"
+              },
+              "duration_ms": {
+                "anyOf": [
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Duration Ms"
+              },
+              "exit_code": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Exit Code"
+              },
+              "status": {
+                "enum": [
+                  "completed",
+                  "failed",
+                  "declined"
+                ],
+                "title": "Status",
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "access_token",
+                  "api_key",
+                  "authorization",
+                  "canonical_sequence",
+                  "condition_id",
+                  "content_hash",
+                  "deletion_rate",
+                  "deletion_seed",
+                  "event_delete_rate",
+                  "excerpt_hash",
+                  "file_label",
+                  "parent_event_id",
+                  "private_url",
+                  "reference_answer",
+                  "relevance",
+                  "rubric",
+                  "selection_reason",
+                  "source_content_hash",
+                  "task_description",
+                  "task_id",
+                  "task_label"
+                ]
+              }
+            },
+            "required": [
+              "command",
+              "status"
+            ],
+            "title": "ShellCommandPayload",
+            "type": "object"
+          }
+        }
+      }
+    }
+  ],
+  "description": "Agent-visible JSONL event. Canonical order, causal links, deletion metadata, task prompts, rubrics, reference answers, relevance labels, and content hashes belong only to private artifacts.",
+  "properties": {
+    "action": {
+      "$ref": "#/$defs/EventAction"
+    },
+    "actor": {
+      "enum": [
+        "workspace_owner",
+        "workspace_collaborator",
+        "workspace_automation",
+        "codex_agent"
+      ],
+      "title": "Actor",
+      "type": "string"
+    },
+    "event_id": {
+      "pattern": "^evt_[a-z][a-z0-9]{15,63}$",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "object": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EventObject"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "payload": {
+      "additionalProperties": true,
+      "title": "Payload",
+      "type": "object"
+    },
+    "provenance": {
+      "$ref": "#/$defs/PublicProvenance"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "session_id": {
+      "pattern": "^ses_[a-z][a-z0-9]{15,63}$",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "workspace_id": {
+      "pattern": "^wrk_[a-z][a-z0-9]{15,63}$",
+      "title": "Workspace Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "event_id",
+    "occurred_at",
+    "workspace_id",
+    "session_id",
+    "actor",
+    "action",
+    "payload",
+    "provenance"
+  ],
+  "title": "Workspace-Bench Context Event Log v2",
+  "type": "object"
+}

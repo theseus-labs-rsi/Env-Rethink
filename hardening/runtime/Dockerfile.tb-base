@@ -1,0 +1,49 @@
+# TB 沙盒底座镜像：单容器里跑 TB 题目所需的一切（不含任何题目数据 / 判分资产）。
+#
+# 形态与 test/services/harness/Dockerfile.base 对齐：只装运行时，题目素材由 runner
+# 运行时上传（workflows/tb_task.py），或由"每题镜像"在下一层 COPY 进来。
+#
+# 构建：bash runtime/build-base.sh [--push]
+FROM python:3.13-slim
+
+ARG NODE_VERSION=20.18.1
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# 基础工具：patch/jq 是 agent 干活要用的（WB 那边也踩过"沙盒里没 patch"）
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        bash \
+        ca-certificates \
+        curl \
+        git \
+        jq \
+        patch \
+        procps \
+        xz-utils \
+    && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
+        | tar xJ -C /usr/local --strip-components=1 \
+    && rm -rf /var/lib/apt/lists/* /tmp/*
+
+# 运行时常量（5 个 mock 服务 + verifier 的落点）
+ENV RUNTIME_DIR=/var/lib/intrastat-runtime \
+    STATE_ROOT=/var/lib/intrastat
+
+# mock 服务运行时（与题目 environment/Dockerfile 的钉版一致）
+RUN pip install --no-cache-dir \
+        Flask==3.1.0 \
+        requests==2.32.3 \
+        PyYAML==6.0.2 \
+        reportlab==4.5.1
+
+# 判分器依赖：runner 直接 `python3 -m pytest`（题目 test.sh 里写死的 venv 在单容器里不存在）
+RUN pip install --no-cache-dir \
+        pytest==9.1.1 \
+        pytest-json-ctrf==0.5.2 \
+        jsonschema==4.23.0
+
+RUN mkdir -p /app /shared /tests /solution /workspace/out \
+             /logs/agent /logs/verifier /var/lib/intrastat /var/lib/intrastat-runtime
+
+WORKDIR /workspace
+CMD ["sleep", "infinity"]

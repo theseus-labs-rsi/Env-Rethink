@@ -1,0 +1,425 @@
+{
+  "schema_version": 2,
+  "content_status": "full",
+  "role_cn": "行政/后勤人员",
+  "self_base": "u_admin",
+  "self_mail": "suwen@example.com",
+  "mail_account": {
+    "address": "suwen@example.com",
+    "login": "suwen",
+    "password": "mock-pass",
+    "display_name": "苏文"
+  },
+  "known_people": [
+    {
+      "base": "u_ops",
+      "mail": "zhangmin@example.com",
+      "typical_role": "任务发起人/行政督办/收口"
+    },
+    {
+      "base": "u_office",
+      "mail": "suntao@example.com",
+      "typical_role": "行政专员/后勤执行协办"
+    },
+    {
+      "base": "u_finance",
+      "mail": "zhaokai@example.com",
+      "typical_role": "费用/成本口径"
+    },
+    {
+      "base": "u_hr",
+      "mail": "chenjing@example.com",
+      "typical_role": "HR 支持/招聘/福利"
+    },
+    {
+      "base": "u_purchase",
+      "mail": "zhoutao@example.com",
+      "typical_role": "采购/库存"
+    },
+    {
+      "base": "u_supply",
+      "mail": "zhengshuang@example.com",
+      "typical_role": "供应商管理"
+    },
+    {
+      "base": "u_security",
+      "mail": "zhengwei@example.com",
+      "typical_role": "安全合规/巡检/应急"
+    },
+    {
+      "base": "u_pmo",
+      "mail": "hejing@example.com",
+      "typical_role": "制度/计划收口"
+    },
+    {
+      "base": "u_data",
+      "mail": "liran@example.com",
+      "typical_role": "数据口径"
+    },
+    {
+      "base": "u_legal",
+      "mail": "zhouzheng@example.com",
+      "typical_role": "法务条款/合同"
+    },
+    {
+      "base": "u_market",
+      "mail": "wumin@example.com",
+      "typical_role": "活动/宣传配合"
+    }
+  ],
+  "stable_groups": [
+    {
+      "group": "admin_coord",
+      "name": "行政综合协调群",
+      "members": [
+        "u_admin",
+        "u_office",
+        "u_ops",
+        "u_finance",
+        "u_hr",
+        "u_pmo"
+      ],
+      "topics": "跨部门行政受理/督办/日常背景"
+    },
+    {
+      "group": "facility",
+      "name": "办公后勤保障群",
+      "members": [
+        "u_admin",
+        "u_office",
+        "u_security",
+        "u_finance"
+      ],
+      "topics": "巡检/应急/办公场所/物资/维修"
+    },
+    {
+      "group": "procure",
+      "name": "采购与供应商对接群",
+      "members": [
+        "u_admin",
+        "u_purchase",
+        "u_supply",
+        "u_finance",
+        "u_legal",
+        "u_office"
+      ],
+      "topics": "采购/库存/供应商/合同"
+    },
+    {
+      "group": "hr_admin",
+      "name": "人事行政协同群",
+      "members": [
+        "u_admin",
+        "u_hr",
+        "u_office",
+        "u_finance"
+      ],
+      "topics": "招聘/绩效/福利/入职离职行政协同"
+    },
+    {
+      "group": "cost",
+      "name": "成本与费用管理群",
+      "members": [
+        "u_admin",
+        "u_finance",
+        "u_ops",
+        "u_data",
+        "u_security"
+      ],
+      "topics": "成本节约/报销/能耗预算口径"
+    },
+    {
+      "group": "event",
+      "name": "会务与活动保障群",
+      "members": [
+        "u_admin",
+        "u_office",
+        "u_ops",
+        "u_market"
+      ],
+      "topics": "会务/活动/团建场地保障"
+    }
+  ],
+  "direct_threads": [
+    {
+      "peer": "u_ops",
+      "topics": "行政任务布置/进度督办/收口",
+      "is_primary_requester": true
+    },
+    {
+      "peer": "u_office",
+      "topics": "行政分工/后勤执行协同"
+    },
+    {
+      "peer": "u_hr",
+      "topics": "HR 支持/招聘/员工福利"
+    },
+    {
+      "peer": "u_finance",
+      "topics": "费用报销口径/成本数据"
+    },
+    {
+      "peer": "u_purchase",
+      "topics": "采购/库存/供应商事项"
+    }
+  ],
+  "mail_contacts": [
+    {
+      "base": "u_ops",
+      "address": "zhangmin@example.com"
+    },
+    {
+      "base": "u_office",
+      "address": "suntao@example.com"
+    },
+    {
+      "base": "u_finance",
+      "address": "zhaokai@example.com"
+    },
+    {
+      "base": "u_hr",
+      "address": "chenjing@example.com"
+    },
+    {
+      "base": "u_purchase",
+      "address": "zhoutao@example.com"
+    },
+    {
+      "base": "u_supply",
+      "address": "zhengshuang@example.com"
+    },
+    {
+      "base": "u_security",
+      "address": "zhengwei@example.com"
+    },
+    {
+      "base": "u_pmo",
+      "address": "hejing@example.com"
+    },
+    {
+      "base": "u_legal",
+      "address": "zhouzheng@example.com"
+    },
+    {
+      "base": "u_market",
+      "address": "wumin@example.com"
+    }
+  ],
+  "background": {
+    "backdate_ceiling": "2026-07-08T10:00:00+08:00",
+    "group_snippets": [
+      {
+        "group": "admin_coord",
+        "sender": "u_hr",
+        "canonical_ts": "2026-05-06T10:12:00+08:00",
+        "text": "六月生日会名单已经确认，礼品按去年的渠道下单就行。"
+      },
+      {
+        "group": "admin_coord",
+        "sender": "u_office",
+        "canonical_ts": "2026-05-20T16:40:00+08:00",
+        "text": "本周快递收发量有点大，下午我统一送一次到各工位。"
+      },
+      {
+        "group": "facility",
+        "sender": "u_security",
+        "canonical_ts": "2026-05-08T15:30:00+08:00",
+        "text": "月度消防设施检查下周三做，需要行政配合开各楼层门禁。"
+      },
+      {
+        "group": "facility",
+        "sender": "u_office",
+        "canonical_ts": "2026-05-19T09:05:00+08:00",
+        "text": "会议室 3 楼预订系统这周维护，临时预定走邮件或找我对接。"
+      },
+      {
+        "group": "procure",
+        "sender": "u_purchase",
+        "canonical_ts": "2026-05-11T09:20:00+08:00",
+        "text": "供应商资质清单我在整理，月底前给行政一份同步版。"
+      },
+      {
+        "group": "procure",
+        "sender": "u_supply",
+        "canonical_ts": "2026-05-12T17:05:00+08:00",
+        "text": "新增渠道台账已更新，苏文你那边需要的话我发你。"
+      },
+      {
+        "group": "hr_admin",
+        "sender": "u_hr",
+        "canonical_ts": "2026-05-13T14:00:00+08:00",
+        "text": "二季度绩效沟通名单这周出，行政侧的后勤岗位表麻烦下周前同步我一版。"
+      },
+      {
+        "group": "cost",
+        "sender": "u_finance",
+        "canonical_ts": "2026-05-15T10:00:00+08:00",
+        "text": "五月各部门费用报销截止到月底，行政费用记得走线上流程。"
+      },
+      {
+        "group": "cost",
+        "sender": "u_data",
+        "canonical_ts": "2026-05-22T14:10:00+08:00",
+        "text": "上月办公能耗数据我合完了，报表按部门拆好放在共享盘了。"
+      },
+      {
+        "group": "event",
+        "sender": "u_ops",
+        "canonical_ts": "2026-05-26T10:05:00+08:00",
+        "text": "下半年团建场地行政先摸底两家，出个比价表给我。"
+      }
+    ],
+    "mail_snippets": [
+      {
+        "mailbox": "INBOX",
+        "from": "u_hr",
+        "to": [
+          "u_admin"
+        ],
+        "cc": [],
+        "canonical_ts": "2026-05-15T09:30:00+08:00",
+        "subject": "6 月新员工入职行政流程确认",
+        "body_text": "苏文，6 月有两名新同事入职，入职当天的工位、门禁卡、电脑领取麻烦按行政标准流程走，具体名单 HR 系统里可查。"
+      },
+      {
+        "mailbox": "Sent",
+        "from": "u_admin",
+        "to": [
+          "u_finance"
+        ],
+        "cc": [],
+        "canonical_ts": "2026-05-29T18:02:00+08:00",
+        "subject": "5 月行政费用报销单据",
+        "body_text": "赵凯，5 月行政类报销（办公用品、快递、饮用水）单据已提交线上流程，麻烦查收，有问题随时找我。"
+      }
+    ],
+    "prior_task_fragments": [
+      {
+        "group": "admin_coord",
+        "sender": "u_ops",
+        "canonical_ts": "2026-06-30T09:10:00+08:00",
+        "text": "四份降本增效实操资料我发群里了，整理时按附件最新版，统一成部门、分公司和项目部都能套用的流程。",
+        "origin_task_id": "102"
+      },
+      {
+        "group": "admin_coord",
+        "sender": "u_finance",
+        "canonical_ts": "2026-06-30T10:00:00+08:00",
+        "text": "费用标准、审批和报销部分按资料原文保留，手册里请增加统一的留痕字段，便于财务审核和后续追溯。",
+        "origin_task_id": "102"
+      },
+      {
+        "group": "admin_coord",
+        "sender": "u_office",
+        "canonical_ts": "2026-06-30T10:20:00+08:00",
+        "text": "办公能耗和车辆使用的执行节点我会按行政日常流程配合，巡检、用车和异常处理的责任人请在手册中列清楚。",
+        "origin_task_id": "102"
+      },
+      {
+        "group": "admin_coord",
+        "sender": "u_admin",
+        "canonical_ts": "2026-07-01T09:10:00+08:00",
+        "text": "收到。我会把四部分合并成巡检手册，增加巡检项目、责任对接、违规判定、整改闭环和现场记录栏，按流程表走。",
+        "origin_task_id": "79"
+      },
+      {
+        "group": "cost",
+        "sender": "u_finance",
+        "canonical_ts": "2026-07-02T09:25:00+08:00",
+        "text": "成本和质量汇总所需的另一份月报放在群文件里了。季度平均、同比和责任分工请以资料正文为准，报告中要把执行节点写清楚。",
+        "origin_task_id": "54"
+      },
+      {
+        "group": "cost",
+        "sender": "u_data",
+        "canonical_ts": "2026-07-02T09:35:00+08:00",
+        "text": "数据汇总建议按月度原值、季度计算值、问题判断三层呈现，计算结果保留必要的单位和小数位，便于后续例会复核。",
+        "origin_task_id": "54"
+      },
+      {
+        "group": "procure",
+        "sender": "u_purchase",
+        "canonical_ts": "2026-07-02T09:12:00+08:00",
+        "text": "采购和供应商相关月报我整理到群文件了，按附件最新版使用，月份之间的统计关系请结合原表确认。",
+        "origin_task_id": "54"
+      },
+      {
+        "group": "admin_coord",
+        "sender": "u_finance",
+        "canonical_ts": "2026-07-03T09:05:00+08:00",
+        "text": "财务部这次按岗位、文件和操作动作分开定权限，工资预算相关信息单独收口，具体范围以群里的资料为准。",
+        "origin_task_id": "35"
+      },
+      {
+        "group": "admin_coord",
+        "sender": "u_hr",
+        "canonical_ts": "2026-07-03T09:12:00+08:00",
+        "text": "涉及部门预算时，只保留部门负责人能看到的汇总层级，员工个人不纳入可见范围，后续按审批节点留痕。",
+        "origin_task_id": "35"
+      },
+      {
+        "group": "admin_coord",
+        "sender": "u_finance",
+        "canonical_ts": "2026-07-03T10:00:00+08:00",
+        "text": "权限表请按查看、编辑、导出、打印、删除、公式、另存为、共享等动作逐项列明；敏感级别和审批、临时权限回收要求以四份表及本条确认的业务边界为准。",
+        "origin_task_id": "35"
+      },
+      {
+        "group": "procure",
+        "sender": "u_purchase",
+        "canonical_ts": "2026-07-06T09:00:00+08:00",
+        "text": "苏文，按供应商管理制度整理一份《供应商全流程管理操作手册.doc》，作为采购和行政协同使用的执行版。请把准入、评审、分级和后续处置串成一套流程，报告日期写 2026 年 7 月 6 日，最终文件名按这个版本收口。",
+        "origin_task_id": "87"
+      },
+      {
+        "group": "procure",
+        "sender": "u_supply",
+        "canonical_ts": "2026-07-06T09:08:00+08:00",
+        "text": "相关制度资料我发群里了，手册中的制度规则以附件最新版为准，整理时不要改变原有审批顺序和评分口径。",
+        "origin_task_id": "87"
+      },
+      {
+        "group": "procure",
+        "sender": "u_purchase",
+        "canonical_ts": "2026-07-06T09:20:00+08:00",
+        "text": "手册完成后请在群里说明已按制度原文整理，采购、供应商管理、财务和法务按各自职责核对流程节点，最终以交付文件为准。",
+        "origin_task_id": "87"
+      },
+      {
+        "group": "admin_coord",
+        "sender": "u_hr",
+        "canonical_ts": "2026-07-08T09:00:00+08:00",
+        "text": "招聘年度资料已按年终归档，后续行政相关岗位请和人事行政协同群里的资料一起核对，最终以最新版材料为准。",
+        "origin_task_id": "328"
+      },
+      {
+        "group": "admin_coord",
+        "sender": "u_hr",
+        "canonical_ts": "2026-07-08T10:00:00+08:00",
+        "text": "资料我都发群里了，行政部请只保留本部门岗位和流动情况，渠道服务、费用、有效期以及周边人才市场信息按附件最新版整理。",
+        "origin_task_id": "328"
+      },
+      {
+        "group": "hr_admin",
+        "sender": "u_office",
+        "canonical_ts": "2026-07-08T09:10:00+08:00",
+        "text": "行政部今年的人员配置复盘需要单独成稿，前台岗位和行政类人才渠道不要与其他部门混在一起。",
+        "origin_task_id": "328"
+      }
+    ]
+  },
+  "interleave": {
+    "policy": "cross_task",
+    "note": "同一苏文的各 task fixture 共享 stable_groups / direct_threads / mail_contacts；不同 task 的相关线程按绝对时间在稳定群里交错。后台只注入良性文本片段（无附件、不含任何 task 答案数值）；同片段在不同 fixture 出现在同一 canonical_ts，跨 fixture 不互相矛盾。"
+  },
+  "id_conventions": {
+    "wecom_user": "u_<base>_<task_id>",
+    "direct_chat": "id 必须等于对方 userid",
+    "group_chat": "chat_<task_id>_<stable_group_slug>",
+    "media": "media_<task_id>_<slug>",
+    "doc": "doc_<task_id>_<slug>",
+    "mail_msg": "m_<task_id>_<slug>",
+    "mail_att": "att_<task_id>_<slug>",
+    "mail_account_suffix_note": "邮箱地址/账号全系统唯一且不随 task 变（区别于 wecom id 的后缀隔离）"
+  }
+}

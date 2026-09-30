@@ -1,0 +1,272 @@
+{
+  "counts": {
+    "authored_for_kit": 21,
+    "vendored": 23,
+    "vendored_with_kit_patch": 5
+  },
+  "files": {
+    ".dockerignore": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:d9277324fb82f3bc3953eed529765cb22fc3607d3bdb0de2db12535bf5efa293"
+    },
+    ".gitignore": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:070a427fd8545bcfa36e19dc85086855a9bdaac1391853d3c58469cc5e29456a"
+    },
+    "Dockerfile": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:6082142b7ea3952876741b326a27f02e2def02dd3e2fd2758945d4abcdeb12ce"
+    },
+    "PROVENANCE.json": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:273df95df3c73de954e939b1e1e5bc08d8077d9c53a085c080cff8fe4012ae76"
+    },
+    "README.md": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:23e58eeea9be91154b0674fdc03e7dae7018c955982d549bd4ec3ffb8fe0170a"
+    },
+    "docs/AMBIENT_HISTORY.md": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:33d111eb08ab04edbc1043e89882a95632691efc4c4d73f3b796e42d4377d923"
+    },
+    "docs/PORTING.md": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:26b57d93eaa53f83eb49c4ea3ff9f7e7f1b4952f38cdcf46d8307807699e1ddd"
+    },
+    "docs/RUNNER_CONTRACT.md": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:e923e641bf6a99c5dff2c2a6716b12a79a15346dc0ea89adbd527cf5ecf5bbce"
+    },
+    "examples/author-pinned-overlay-spec.example.json": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:5e21d16b32d1a5f4524257a8565f0e15e63a26143cd0773950a2aaa52e3359b8"
+    },
+    "examples/event-log-synthesis-config.example.json": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:b682633fbce570347a67b135bdbcf0e38652349e588d69b8382292f8156baf3e"
+    },
+    "examples/task-input-collection-config.example.json": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:effda214923e5f89cc6bc38a64bb5ac50012e71cae54332e889e4182b3894077"
+    },
+    "examples/workspace-collection-cover-config.example.json": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:808d8056a23c8d81d7899aa171e91947781910f9aa29ca1f44c3741704c613ee"
+    },
+    "pyproject.toml": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:68682a19e9f2065eb85ec5294ea05d0da6460cbbd8c662aae89f4f025fff4926"
+    },
+    "requirements.lock.txt": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:b083c9d210d808079b55125854781b12b8a52907ef722d4bbc7cf74c15a727c8"
+    },
+    "scripts/build_author_pinned_overlay.py": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:f6819b91b18d04c01433520a37ee715150add8f9156a588e06830bbcf077cbf5"
+    },
+    "scripts/build_content_derived_collection_refinement.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:a05287a242a25da2fc71912f8478dc9b026ee2d2be5eeaf2da71a00049c938e4",
+      "source": "evaluation/scripts/build_content_derived_collection_refinement.py",
+      "source_sha256": "sha256:a05287a242a25da2fc71912f8478dc9b026ee2d2be5eeaf2da71a00049c938e4"
+    },
+    "scripts/build_directory_collection_refinement.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:e8913a87f66edd60c9bee6b9b8bc4312528ca670fbfa134157925e5c2b6c7c98",
+      "source": "evaluation/scripts/build_directory_collection_refinement.py",
+      "source_sha256": "sha256:e8913a87f66edd60c9bee6b9b8bc4312528ca670fbfa134157925e5c2b6c7c98"
+    },
+    "scripts/build_manual_file_discovery_map.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:1cd84cfc1f9983a778c9f681cf8a2d64986a3d731a5711134302b6b66da6ef81",
+      "source": "evaluation/scripts/build_manual_file_discovery_map.py",
+      "source_sha256": "sha256:1cd84cfc1f9983a778c9f681cf8a2d64986a3d731a5711134302b6b66da6ef81"
+    },
+    "scripts/build_task_oracle_map_batch.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:6135760aeee83235ed8a485abff65e223a3a2fb53df7be5565aa9cf224a8a460",
+      "source": "evaluation/scripts/build_task_oracle_map_batch.py",
+      "source_sha256": "sha256:6135760aeee83235ed8a485abff65e223a3a2fb53df7be5565aa9cf224a8a460"
+    },
+    "scripts/curate_targeted_context_components.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:d3c390854969d5b9d722200a7291e7debf52f6ef042af7c5a9dcc8bec1bd1fb5",
+      "source": "evaluation/scripts/curate_targeted_context_components.py",
+      "source_sha256": "sha256:d3c390854969d5b9d722200a7291e7debf52f6ef042af7c5a9dcc8bec1bd1fb5"
+    },
+    "scripts/finalize_workspace_collection_cover.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:9caefa5a9c48ed85b421b4f2d069a9b5e3fa77bc443de515395f8bdb79cdfe77",
+      "source": "evaluation/scripts/finalize_workspace_collection_cover.py",
+      "source_sha256": "sha256:9caefa5a9c48ed85b421b4f2d069a9b5e3fa77bc443de515395f8bdb79cdfe77"
+    },
+    "scripts/generate_workspace_event_log.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:11f64be226031e78fa562ddc0eeb5667bf50d222ead991316c935e57d860c305",
+      "source": "evaluation/scripts/generate_workspace_event_log.py",
+      "source_sha256": "sha256:11f64be226031e78fa562ddc0eeb5667bf50d222ead991316c935e57d860c305"
+    },
+    "scripts/merge_targeted_context_batches.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:1a4e07c0d5fce5b5c0608edab87529b8422413db4a432392aab31a54bfe5ce69",
+      "source": "evaluation/scripts/merge_targeted_context_batches.py",
+      "source_sha256": "sha256:1a4e07c0d5fce5b5c0608edab87529b8422413db4a432392aab31a54bfe5ce69"
+    },
+    "scripts/run_all_rubric_context_loop.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:a76f2d4fdd97db5d9e99c7531125c943e312b92c35ef9e74922b4417a7e0a4ac",
+      "source": "evaluation/scripts/run_all_rubric_context_loop.py",
+      "source_sha256": "sha256:a76f2d4fdd97db5d9e99c7531125c943e312b92c35ef9e74922b4417a7e0a4ac"
+    },
+    "scripts/run_codex_trace_event_log.py": {
+      "kind": "vendored_with_kit_patch",
+      "kit_sha256": "sha256:7d42ab306558b5430cf0d91eb9d97aa652442cfbb87fa1ecdb7b703fd53cc69e",
+      "source": "evaluation/scripts/run_codex_trace_event_log.py",
+      "source_sha256": "sha256:ec2743207e76e092ccd508951f2bfef9bb240c5cd941172b9a7d92352b71d345"
+    },
+    "scripts/run_context_event_log_synthesis.py": {
+      "kind": "vendored_with_kit_patch",
+      "kit_sha256": "sha256:45fee30b062b31030d1d8d08745ee2bad30f62c088bfd83bc4a035e86b50b651",
+      "source": "evaluation/scripts/run_context_event_log_synthesis.py",
+      "source_sha256": "sha256:a7f28275f47a66f2dafebebd1ad8a3152944394eb160f8e9ef569abe3a38ec97"
+    },
+    "scripts/run_task_input_collection_batch.py": {
+      "kind": "vendored_with_kit_patch",
+      "kit_sha256": "sha256:e2a570f2705e0a01ebca40f1e6f397dbcc5b87d96d7b6a8d8254285cc28b8b28",
+      "source": "evaluation/scripts/run_task_input_collection_batch.py",
+      "source_sha256": "sha256:c74b0a235084ed382d0ebedda8a59d7f78ec265f499049c30b3bcc93884870ea"
+    },
+    "scripts/run_task_input_collection_synthesis.py": {
+      "kind": "vendored_with_kit_patch",
+      "kit_sha256": "sha256:ec8cf0bf4efa8b956ee07d582a5b1c0b330bf284e35a517e9c1d45cfffc51078",
+      "source": "evaluation/scripts/run_task_input_collection_synthesis.py",
+      "source_sha256": "sha256:19dee63f57aa76e1087bbd7c3aa8e238267650fb83144f5628ab670077ef4bb4"
+    },
+    "scripts/run_workspace_collection_synthesis.py": {
+      "kind": "vendored_with_kit_patch",
+      "kit_sha256": "sha256:1424668ae3434948141290146f0b58bd4122675ff4c2f3ae6640a9327cb785fb",
+      "source": "evaluation/scripts/run_workspace_collection_synthesis.py",
+      "source_sha256": "sha256:39624e7f68a3dae17d5da9bdbf984aca8911fe085804ea12bffec20cbd4eff9d"
+    },
+    "scripts/verify_public_artifacts.py": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:c0f478257ea4d931aadc4b7a708d9a95a660f93cfa9d434975ee8230389900c9"
+    },
+    "src/workspace_env/__init__.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:71b86971cf2a709c127ffd38f95d73063c591acf99ce4b5dab93cfaca69cd878",
+      "source": "evaluation/src/workspace_env/__init__.py",
+      "source_sha256": "sha256:71b86971cf2a709c127ffd38f95d73063c591acf99ce4b5dab93cfaca69cd878"
+    },
+    "src/workspace_env/artifact_gate.py": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:97b3c9b6b6bf35e420f8e61bae8bdb86fd5f59610719dce2c403b0e67646ac10"
+    },
+    "src/workspace_env/codex_trace_events.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:5a751095121c559e206fc9185265708eba84e2dd68e275ec939b5c229caf583b",
+      "source": "evaluation/src/workspace_env/codex_trace_events.py",
+      "source_sha256": "sha256:5a751095121c559e206fc9185265708eba84e2dd68e275ec939b5c229caf583b"
+    },
+    "src/workspace_env/collection_map.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:297447eea8627678826d505063e8e8a6433de6b267c378749ce447b4a2b0a837",
+      "source": "evaluation/src/workspace_env/collection_map.py",
+      "source_sha256": "sha256:297447eea8627678826d505063e8e8a6433de6b267c378749ce447b4a2b0a837"
+    },
+    "src/workspace_env/collection_synthesis.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:a1913c737c9e097ed1e3d637df10979fbcf8ed278ba3d3e68c1409994219ea3e",
+      "source": "evaluation/src/workspace_env/collection_synthesis.py",
+      "source_sha256": "sha256:a1913c737c9e097ed1e3d637df10979fbcf8ed278ba3d3e68c1409994219ea3e"
+    },
+    "src/workspace_env/event_generator.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:06003b20c2ac9afc65d80f2a8b77b5d3bf7b25d93627dbd69eec841e0515011f",
+      "source": "evaluation/src/workspace_env/event_generator.py",
+      "source_sha256": "sha256:06003b20c2ac9afc65d80f2a8b77b5d3bf7b25d93627dbd69eec841e0515011f"
+    },
+    "src/workspace_env/event_log.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:9732616d7f49a136cff27a28a57a5fb3657eede32e518df46e02a74adca9efbd",
+      "source": "evaluation/src/workspace_env/event_log.py",
+      "source_sha256": "sha256:9732616d7f49a136cff27a28a57a5fb3657eede32e518df46e02a74adca9efbd"
+    },
+    "src/workspace_env/event_log_workflow.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:4917fe47a38af0ae4f82a059ff862636a6dc9a6880697e0ab6d8cb7fb69bbb21",
+      "source": "evaluation/src/workspace_env/event_log_workflow.py",
+      "source_sha256": "sha256:4917fe47a38af0ae4f82a059ff862636a6dc9a6880697e0ab6d8cb7fb69bbb21"
+    },
+    "src/workspace_env/event_search.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:272ba3927a00b01ae7887bb57e0d71cb7a72fad3a90e32bd6785e639bb74dfe4",
+      "source": "evaluation/src/workspace_env/event_search.py",
+      "source_sha256": "sha256:272ba3927a00b01ae7887bb57e0d71cb7a72fad3a90e32bd6785e639bb74dfe4"
+    },
+    "src/workspace_env/event_synthesis.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:c18afeacfd4c60928c790d8914f39e8e7b6a9493acf46df24b59b6cddb19d596",
+      "source": "evaluation/src/workspace_env/event_synthesis.py",
+      "source_sha256": "sha256:c18afeacfd4c60928c790d8914f39e8e7b6a9493acf46df24b59b6cddb19d596"
+    },
+    "src/workspace_env/integration.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:239c9d940f92ab45a572fc73bf1150c3b72f4ce3cec82b91d88ae6199d274aba",
+      "source": "evaluation/src/workspace_env/integration.py",
+      "source_sha256": "sha256:239c9d940f92ab45a572fc73bf1150c3b72f4ce3cec82b91d88ae6199d274aba"
+    },
+    "src/workspace_env/manifest.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:869d2be2b40d66ffa4902cd8dd08dbfada05d9fe078cdf611460ea8bfa45e3a3",
+      "source": "evaluation/src/workspace_env/manifest.py",
+      "source_sha256": "sha256:869d2be2b40d66ffa4902cd8dd08dbfada05d9fe078cdf611460ea8bfa45e3a3"
+    },
+    "src/workspace_env/runner.py": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:6cd588fbfdeaa2cd2387e7aa79e73f773ecd5a83848fb8c6a508be686d53419d"
+    },
+    "src/workspace_env/targeted_overlay.py": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:be0dfc5d86b4b8902793f88f8e5355062540683ee6ac14210d1cd220721d2fbd"
+    },
+    "src/workspace_env/task_input_collection_batch.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:d032090226aa3c5f56ffab9b801bb38eaede3838978c2418842f0e899803643a",
+      "source": "evaluation/src/workspace_env/task_input_collection_batch.py",
+      "source_sha256": "sha256:d032090226aa3c5f56ffab9b801bb38eaede3838978c2418842f0e899803643a"
+    },
+    "src/workspace_env/workspace_collection_cover.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:ca7a86f0c03cb474e73028332e12b5c7680710852981af0cdd9d9311e93d7df5",
+      "source": "evaluation/src/workspace_env/workspace_collection_cover.py",
+      "source_sha256": "sha256:ca7a86f0c03cb474e73028332e12b5c7680710852981af0cdd9d9311e93d7df5"
+    },
+    "src/workspace_env/workspace_collection_synthesis.py": {
+      "kind": "vendored",
+      "kit_sha256": "sha256:240ce59fc0fb836d4ed7b45654dd81897cd2f652cdb29a08105b0606586596e5",
+      "source": "evaluation/src/workspace_env/workspace_collection_synthesis.py",
+      "source_sha256": "sha256:240ce59fc0fb836d4ed7b45654dd81897cd2f652cdb29a08105b0606586596e5"
+    },
+    "tests/test_smoke.py": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:ec853515f04b3d06c8f6b248be43c2fe5c3d9fbd91a590d33a80d3dda468eeea"
+    },
+    "tests/test_targeted_overlay_and_gate.py": {
+      "kind": "authored_for_kit",
+      "kit_sha256": "sha256:2ecbef65fbf0a91eba6e13dd2cf82ee2560fd0316f9603a8388774622941cbf4"
+    }
+  },
+  "format": "envgen-kit-provenance.v1",
+  "kind_legend": {
+    "authored_for_kit": "本包新写",
+    "vendored": "与源仓库逐字节相同",
+    "vendored_with_kit_patch": "来自源仓库但本包做了改动（kit_sha256≠source_sha256）"
+  },
+  "patch_summary": "（1）5 个入口脚本改为 runner 注入（--runner / $ENVGEN_RUNNER）；（2）新增 runner.py（契约）、artifact_gate.py（公开产物门禁）、targeted_overlay.py（作者钉死的定向 overlay）与对应入口脚本；（3）新增 docs/AMBIENT_HISTORY.md、examples/author-pinned-overlay-spec.example.json 与两组测试。",
+  "source_branch": "submit/evolve-pre-exp",
+  "source_commit": "c67c0cf031e183a1ad82feba32d5e02cebe6f394",
+  "source_repo": "env-evolve",
+  "vendored_at": "2026-09-15"
+}

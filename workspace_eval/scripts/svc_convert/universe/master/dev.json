@@ -1,0 +1,252 @@
+{
+  "schema_version": 2,
+  "content_status": "full",
+  "role_cn": "开发人员",
+  "self_base": "u_dev",
+  "self_mail": "chengyiming@example.com",
+  "mail_account": {
+    "address": "chengyiming@example.com",
+    "login": "chengyiming",
+    "password": "mock-pass",
+    "display_name": "程一鸣"
+  },
+  "known_people": [
+    {
+      "base": "u_ops",
+      "mail": "zhangmin@example.com",
+      "typical_role": "任务发起人/业务收口"
+    },
+    {
+      "base": "u_quality",
+      "mail": "sunqi@example.com",
+      "typical_role": "测试/缺陷统计"
+    },
+    {
+      "base": "u_admin",
+      "mail": "suwen@example.com",
+      "typical_role": "行政支持"
+    },
+    {
+      "base": "u_data",
+      "mail": "liran@example.com",
+      "typical_role": "数据/指标口径"
+    },
+    {
+      "base": "u_product",
+      "mail": "xunuo@example.com",
+      "typical_role": "需求/优先级"
+    },
+    {
+      "base": "u_hr",
+      "mail": "chenjing@example.com",
+      "typical_role": "招聘/协同"
+    },
+    {
+      "base": "u_finance",
+      "mail": "zhaokai@example.com",
+      "typical_role": "成本口径"
+    },
+    {
+      "base": "u_pmo",
+      "mail": "hejing@example.com",
+      "typical_role": "排期/发布计划"
+    }
+  ],
+  "stable_groups": [
+    {
+      "group": "dev_team",
+      "name": "技术研发部大群",
+      "members": [
+        "u_dev",
+        "u_eng",
+        "u_quality",
+        "u_ops",
+        "u_product"
+      ],
+      "topics": "开发日常/发布/技术同步"
+    },
+    {
+      "group": "dev_release",
+      "name": "发布与依赖协同群",
+      "members": [
+        "u_dev",
+        "u_ops",
+        "u_quality",
+        "u_pmo",
+        "u_security"
+      ],
+      "topics": "发布窗口/依赖版本/回归"
+    },
+    {
+      "group": "dev_quality",
+      "name": "质量与测试协同群",
+      "members": [
+        "u_dev",
+        "u_quality",
+        "u_eng",
+        "u_product"
+      ],
+      "topics": "缺陷统计/测试缺口/复现"
+    },
+    {
+      "group": "dev_support",
+      "name": "研发支持协同群",
+      "members": [
+        "u_dev",
+        "u_admin",
+        "u_hr",
+        "u_finance",
+        "u_pmo"
+      ],
+      "topics": "行政/招聘/资源支持"
+    }
+  ],
+  "direct_threads": [
+    {
+      "peer": "u_ops",
+      "topics": "需求/发布收口",
+      "is_primary_requester": true
+    },
+    {
+      "peer": "u_quality",
+      "topics": "缺陷/测试协同"
+    },
+    {
+      "peer": "u_product",
+      "topics": "需求/优先级"
+    },
+    {
+      "peer": "u_pmo",
+      "topics": "排期/发布计划"
+    },
+    {
+      "peer": "u_admin",
+      "topics": "行政支持"
+    }
+  ],
+  "mail_contacts": [
+    {
+      "base": "u_ops",
+      "address": "zhangmin@example.com"
+    },
+    {
+      "base": "u_quality",
+      "address": "sunqi@example.com"
+    },
+    {
+      "base": "u_admin",
+      "address": "suwen@example.com"
+    },
+    {
+      "base": "u_data",
+      "address": "liran@example.com"
+    },
+    {
+      "base": "u_product",
+      "address": "xunuo@example.com"
+    },
+    {
+      "base": "u_hr",
+      "address": "chenjing@example.com"
+    },
+    {
+      "base": "u_finance",
+      "address": "zhaokai@example.com"
+    },
+    {
+      "base": "u_pmo",
+      "address": "hejing@example.com"
+    }
+  ],
+  "background": {
+    "backdate_ceiling": "2026-06-05T17:50:00+08:00",
+    "group_snippets": [
+      {
+        "group": "dev_team",
+        "sender": "u_eng",
+        "canonical_ts": "2026-05-25T10:00:00+08:00",
+        "text": "指标看附件，季度口径不是 0%。"
+      },
+      {
+        "group": "dev_team",
+        "sender": "u_quality",
+        "canonical_ts": "2026-05-27T14:00:00+08:00",
+        "text": "状态必须严格等于已解决，只算有效行。"
+      },
+      {
+        "group": "dev_release",
+        "sender": "u_pmo",
+        "canonical_ts": "2026-05-28T11:00:00+08:00",
+        "text": "发布窗口见排期，这个是最终版。"
+      },
+      {
+        "group": "dev_release",
+        "sender": "u_security",
+        "canonical_ts": "2026-05-29T15:30:00+08:00",
+        "text": "根因不要写成配置问题，测试与监控缺口都要保留。"
+      },
+      {
+        "group": "dev_quality",
+        "sender": "u_quality",
+        "canonical_ts": "2026-06-01T09:30:00+08:00",
+        "text": "这批缺陷我按状态值重新统计了一遍，可复现的清单在共享盘。"
+      },
+      {
+        "group": "dev_team",
+        "sender": "u_ops",
+        "canonical_ts": "2026-06-02T16:00:00+08:00",
+        "text": "大家先收口，@李然 数据口径你确认一下。"
+      },
+      {
+        "group": "dev_support",
+        "sender": "u_admin",
+        "canonical_ts": "2026-06-03T10:00:00+08:00",
+        "text": "按流程表走，节点时间以通知为准。"
+      },
+      {
+        "group": "dev_support",
+        "sender": "u_hr",
+        "canonical_ts": "2026-06-04T14:30:00+08:00",
+        "text": "名单以 HR 系统为准，按人才画像标准走。"
+      }
+    ],
+    "mail_snippets": [
+      {
+        "mailbox": "INBOX",
+        "from": "u_ops",
+        "to": [
+          "u_dev"
+        ],
+        "cc": [],
+        "canonical_ts": "2026-05-30T09:00:00+08:00",
+        "subject": "本周发布排期确认",
+        "body_text": "程一鸣，本周发布排期按群里最新版，回归通过后给我个确认。"
+      },
+      {
+        "mailbox": "Sent",
+        "from": "u_dev",
+        "to": [
+          "u_quality"
+        ],
+        "cc": [],
+        "canonical_ts": "2026-06-05T17:50:00+08:00",
+        "subject": "缺陷统计口径已核对",
+        "body_text": "孙琪，本周缺陷统计口径已按状态值核对，清单在共享盘，请查收。"
+      }
+    ],
+    "prior_task_fragments": []
+  },
+  "interleave": {
+    "policy": "cross_task",
+    "note": "同一程一鸣的各 task fixture 共享 stable_groups/direct_threads/mail_contacts；不同 task 线程按绝对时间在稳定群里交错。背景只注入良性文本片段。"
+  },
+  "id_conventions": {
+    "wecom_user": "u_<base>_<task_id>",
+    "direct_chat": "id 必须等于对方 userid",
+    "group_chat": "chat_<task_id>_<stable_group_slug>",
+    "media": "media_<task_id>_<slug>",
+    "doc": "doc_<task_id>_<slug>",
+    "mail_msg": "m_<task_id>_<slug>",
+    "mail_att": "att_<task_id>_<slug>"
+  }
+}

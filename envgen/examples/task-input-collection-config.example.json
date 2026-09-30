@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "run_id": "task-input-map-example-001",
+  "task_metadata_path": "/abs/path/to/tasks/<task_id>/metadata.json",
+  "workspace_root": "/abs/path/to/workspace_snapshot",
+  "catalog_root": "/abs/path/to/artifacts/catalog",
+  "output_root": "/abs/path/to/artifacts/task-input-map-001",
+  "model": "gpt-5.4",
+  "auth_mode": "chatgpt",
+  "expected_codex_version": "0.144.5",
+  "reasoning_effort": "medium",
+  "timeout_seconds": 600.0,
+  "max_review_attempts": 5
+}

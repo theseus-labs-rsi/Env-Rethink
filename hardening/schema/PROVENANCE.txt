@@ -1,0 +1,3 @@
+# 来源：作者另一个 benchmark 项目生成的 canonical event schema
+# 生成脚本在上游项目里；本仓只是它的消费者。
+# vendor 日期：2026-09-28

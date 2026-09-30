@@ -1,0 +1,254 @@
+{
+  "schema_version": 2,
+  "content_status": "full",
+  "role_cn": "产品人员",
+  "self_base": "u_product",
+  "self_mail": "xunuo@example.com",
+  "mail_account": {
+    "address": "xunuo@example.com",
+    "login": "xunuo",
+    "password": "mock-pass",
+    "display_name": "许诺"
+  },
+  "known_people": [
+    {
+      "base": "u_data",
+      "mail": "liran@example.com",
+      "typical_role": "数据口径/看板"
+    },
+    {
+      "base": "u_ops",
+      "mail": "zhangmin@example.com",
+      "typical_role": "任务发起人/运营"
+    },
+    {
+      "base": "u_dev",
+      "mail": "chengyiming@example.com",
+      "typical_role": "技术/依赖"
+    },
+    {
+      "base": "u_research",
+      "mail": "chenchen@example.com",
+      "typical_role": "研究/竞品"
+    },
+    {
+      "base": "u_pmo",
+      "mail": "hejing@example.com",
+      "typical_role": "计划/版本收口"
+    },
+    {
+      "base": "u_finance",
+      "mail": "zhaokai@example.com",
+      "typical_role": "成本口径"
+    },
+    {
+      "base": "u_cs",
+      "mail": "wangfang@example.com",
+      "typical_role": "客户成功/案例"
+    },
+    {
+      "base": "u_market",
+      "mail": "wumin@example.com",
+      "typical_role": "市场/活动"
+    }
+  ],
+  "stable_groups": [
+    {
+      "group": "product_team",
+      "name": "产品部大群",
+      "members": [
+        "u_product",
+        "u_ops",
+        "u_dev",
+        "u_data",
+        "u_research",
+        "u_pmo"
+      ],
+      "topics": "需求/优先级/版本同步"
+    },
+    {
+      "group": "product_data",
+      "name": "产品数据口径群",
+      "members": [
+        "u_product",
+        "u_data",
+        "u_ops",
+        "u_research",
+        "u_finance"
+      ],
+      "topics": "看板/口径/竞品数据"
+    },
+    {
+      "group": "product_req",
+      "name": "需求评审协同群",
+      "members": [
+        "u_product",
+        "u_dev",
+        "u_quality",
+        "u_pmo",
+        "u_ops"
+      ],
+      "topics": "需求评审/优先级/排期"
+    },
+    {
+      "group": "product_market",
+      "name": "产品市场协同群",
+      "members": [
+        "u_product",
+        "u_market",
+        "u_cs",
+        "u_ops",
+        "u_research"
+      ],
+      "topics": "市场/客户案例/竞品"
+    }
+  ],
+  "direct_threads": [
+    {
+      "peer": "u_data",
+      "topics": "数据看板/口径",
+      "is_primary_requester": true
+    },
+    {
+      "peer": "u_ops",
+      "topics": "运营需求/收口"
+    },
+    {
+      "peer": "u_dev",
+      "topics": "技术可行性/依赖"
+    },
+    {
+      "peer": "u_pmo",
+      "topics": "计划/版本闭环"
+    },
+    {
+      "peer": "u_research",
+      "topics": "竞品/研究"
+    }
+  ],
+  "mail_contacts": [
+    {
+      "base": "u_data",
+      "address": "liran@example.com"
+    },
+    {
+      "base": "u_ops",
+      "address": "zhangmin@example.com"
+    },
+    {
+      "base": "u_dev",
+      "address": "chengyiming@example.com"
+    },
+    {
+      "base": "u_research",
+      "address": "chenchen@example.com"
+    },
+    {
+      "base": "u_pmo",
+      "address": "hejing@example.com"
+    },
+    {
+      "base": "u_finance",
+      "address": "zhaokai@example.com"
+    },
+    {
+      "base": "u_cs",
+      "address": "wangfang@example.com"
+    },
+    {
+      "base": "u_market",
+      "address": "wumin@example.com"
+    }
+  ],
+  "background": {
+    "backdate_ceiling": "2024-05-10T17:30:00+08:00",
+    "group_snippets": [
+      {
+        "group": "product_team",
+        "sender": "u_ops",
+        "canonical_ts": "2024-04-22T10:00:00+08:00",
+        "text": "这个需求按 P1 走，用户场景我补一下描述。"
+      },
+      {
+        "group": "product_team",
+        "sender": "u_dev",
+        "canonical_ts": "2024-04-24T14:30:00+08:00",
+        "text": "根因要看代码路径，发布窗口见排期。"
+      },
+      {
+        "group": "product_data",
+        "sender": "u_data",
+        "canonical_ts": "2024-04-26T11:00:00+08:00",
+        "text": "数字我核过了，分母按 88 家算。"
+      },
+      {
+        "group": "product_data",
+        "sender": "u_research",
+        "canonical_ts": "2024-04-28T15:00:00+08:00",
+        "text": "竞品口径以报告为准，我按这个整理。"
+      },
+      {
+        "group": "product_req",
+        "sender": "u_pmo",
+        "canonical_ts": "2024-04-29T09:30:00+08:00",
+        "text": "按 O/KR 层级看，这个是最终版。"
+      },
+      {
+        "group": "product_req",
+        "sender": "u_quality",
+        "canonical_ts": "2024-05-06T10:30:00+08:00",
+        "text": "状态必须严格等于已解决，只算有效行。"
+      },
+      {
+        "group": "product_market",
+        "sender": "u_cs",
+        "canonical_ts": "2024-05-07T14:00:00+08:00",
+        "text": "这三家需要单独看，客户 8 是席位风险。"
+      },
+      {
+        "group": "product_market",
+        "sender": "u_market",
+        "canonical_ts": "2024-05-08T16:00:00+08:00",
+        "text": "投放节奏看排期，预算按季度口径。"
+      }
+    ],
+    "mail_snippets": [
+      {
+        "mailbox": "INBOX",
+        "from": "u_data",
+        "to": [
+          "u_product"
+        ],
+        "cc": [],
+        "canonical_ts": "2024-05-06T09:30:00+08:00",
+        "subject": "产品数据看板更新",
+        "body_text": "许诺，产品数据看板已按最新口径更新，请核对。"
+      },
+      {
+        "mailbox": "Sent",
+        "from": "u_product",
+        "to": [
+          "u_pmo"
+        ],
+        "cc": [],
+        "canonical_ts": "2024-05-10T17:30:00+08:00",
+        "subject": "本周需求评审排期",
+        "body_text": "何静，本周需求评审排期已确认，请按版本计划推进。"
+      }
+    ],
+    "prior_task_fragments": []
+  },
+  "interleave": {
+    "policy": "cross_task",
+    "note": "同一许诺的各 task fixture 共享 stable_groups/direct_threads/mail_contacts；不同 task 线程按绝对时间在稳定群里交错。背景只注入良性文本片段。"
+  },
+  "id_conventions": {
+    "wecom_user": "u_<base>_<task_id>",
+    "direct_chat": "id 必须等于对方 userid",
+    "group_chat": "chat_<task_id>_<stable_group_slug>",
+    "media": "media_<task_id>_<slug>",
+    "doc": "doc_<task_id>_<slug>",
+    "mail_msg": "m_<task_id>_<slug>",
+    "mail_att": "att_<task_id>_<slug>"
+  }
+}

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="${WORKSPACE_BENCH_ROOT:-${RIP_BENCH_ROOT:-}}"
+if [[ -z "$ROOT" ]]; then
+  ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+fi
+export PYTHONPATH="$ROOT/evaluation/src${PYTHONPATH:+:$PYTHONPATH}"
+exec uv run \
+  --project "$ROOT/evaluation" \
+  --frozen \
+  --no-sync \
+  python -m workspace_services.wecom.server "$@"

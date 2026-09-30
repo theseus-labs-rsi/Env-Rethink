@@ -1,0 +1,28 @@
+{
+  "format": "envgen-kit.author-pinned-overlay-spec.v1",
+  "run_label": "ambient-overlay-example-20260915-r1",
+  "targeted_task_ids": ["<task id this overlay is constructed for>"],
+  "reporting_note": "Author-pinned overlay: cite-only facts, verified verbatim at build time; report separately from natural history.",
+  "sessions": [
+    {
+      "label": "handover-review",
+      "started_at": "2025-11-03T09:12:00Z",
+      "ended_at": "2025-11-03T09:31:00Z",
+      "actor": "workspace_owner",
+      "title": "交接备忘复核",
+      "narrative": "复核交接便笺里提到的三件事，确认台账与脚本的去处。",
+      "application_context": ["workspace_snapshot_inventory"],
+      "status": "completed",
+      "reads": [
+        {
+          "path": "桌面/先记一下.txt",
+          "locator": { "kind": "line", "start": 2, "end": 4 },
+          "excerpt": "2. 旧版台账先别删，等月度核对完再归档。",
+          "purpose": "确认台账归档时机",
+          "observation": "便笺注明月度核对后再归档，属于交接约定。",
+          "mime_type": "text/plain"
+        }
+      ]
+    }
+  ]
+}

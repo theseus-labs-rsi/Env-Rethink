@@ -1,0 +1,94 @@
+services:
+  workspace-bench:
+    build:
+      context: ../..
+      dockerfile: evaluation/docker/Dockerfile
+      network: host
+    image: workspace-bench:local
+    network_mode: host
+    working_dir: /workspace/Workspace-Bench/evaluation
+    tty: true
+    stdin_open: true
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      WORKSPACE_BENCH_ROOT: /workspace/Workspace-Bench
+      WORKSPACE_BENCH_EVAL_ROOT: /workspace/Workspace-Bench/evaluation
+      RIP_BENCH_ROOT: /workspace/Workspace-Bench
+      RIP_BENCH_EVAL_ROOT: /workspace/Workspace-Bench/evaluation
+      DEEPAGENTS_ROOT: /workspace/Workspace-Bench/deepagents
+      CODEX_SANDBOX_MODE: danger-full-access
+      CODEX_HOME: /opt/workspace-bench/agent-homes/codex/.codex
+      WORKSPACE_BENCH_CODEX_HOME_TEMPLATE: /opt/workspace-bench/agent-homes/codex/.codex
+      WORKSPACE_BENCH_CLAUDE_CONFIG_DIR: /opt/workspace-bench/agent-homes/claude/.claude
+      WORKSPACE_BENCH_OPENCLAW_SKILLS_DIR: /opt/workspace-bench/agent-homes/openclaw/.openclaw/skills
+      WORKSPACE_BENCH_DEEPAGENTS_SKILLS_DIR: /opt/workspace-bench/agent-homes/deepagents/.deepagents/skills
+      WORKSPACE_BENCH_DSH_SKILLS_DIR: /opt/workspace-bench/agent-homes/dsh/.dsh/skills
+      UV_PYTHON_INSTALL_DIR: /opt/uv/python
+      UV_PROJECT_ENVIRONMENT: /opt/workspace-bench/evaluation-venv
+    volumes:
+      - ../..:/workspace/Workspace-Bench
+      - uv-cache:/root/.cache/uv
+      - npm-cache:/root/.npm
+      - openclaw-home:/root/.openclaw
+
+  # This service is deliberately separate from the development runner above.
+  # run_isolated_benchmark.py creates one instance per task with `--rm`, so no
+  # process, HOME directory, temporary file, or cache can survive into the
+  # next task.  The repository is read-only; only the per-task result directory
+  # beneath evaluation/output is writable.
+  workspace-bench-task:
+    build:
+      context: ../..
+      dockerfile: evaluation/docker/Dockerfile
+      network: host
+    image: workspace-bench:local
+    working_dir: /tmp
+    init: true
+    read_only: true
+    cpus: ${WORKSPACE_BENCH_TASK_CPUS:-2}
+    mem_limit: ${WORKSPACE_BENCH_TASK_MEMORY:-8192m}
+    pids_limit: ${WORKSPACE_BENCH_TASK_PIDS:-512}
+    # XFS project quotas are not available on every Docker host. The launcher
+    # normally adds docker-compose.storage-quota.yaml, then retries this base
+    # service if Docker rejects storage_opt.size. task_container_entry.py still
+    # enforces the per-case storage budget in either mode.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      WORKSPACE_BENCH_ROOT: /workspace/Workspace-Bench
+      WORKSPACE_BENCH_EVAL_ROOT: /workspace/Workspace-Bench/evaluation
+      RIP_BENCH_ROOT: /workspace/Workspace-Bench
+      RIP_BENCH_EVAL_ROOT: /workspace/Workspace-Bench/evaluation
+      DEEPAGENTS_ROOT: /workspace/Workspace-Bench/deepagents
+      CODEX_SANDBOX_MODE: workspace-write
+      CODEX_HOME: /opt/workspace-bench/agent-homes/codex/.codex
+      WORKSPACE_BENCH_CODEX_HOME_TEMPLATE: /opt/workspace-bench/agent-homes/codex/.codex
+      WORKSPACE_BENCH_CLAUDE_CONFIG_DIR: /opt/workspace-bench/agent-homes/claude/.claude
+      WORKSPACE_BENCH_OPENCLAW_SKILLS_DIR: /opt/workspace-bench/agent-homes/openclaw/.openclaw/skills
+      WORKSPACE_BENCH_DEEPAGENTS_SKILLS_DIR: /opt/workspace-bench/agent-homes/deepagents/.deepagents/skills
+      WORKSPACE_BENCH_DSH_SKILLS_DIR: /opt/workspace-bench/agent-homes/dsh/.dsh/skills
+      WORKSPACE_BENCH_TASK_STORAGE_QUOTA_MODE: ${WORKSPACE_BENCH_TASK_STORAGE_QUOTA_MODE:-docker-layer}
+      HOME: /tmp/home
+      XDG_CACHE_HOME: /tmp/cache
+      UV_CACHE_DIR: /tmp/uv-cache
+      UV_PYTHON_INSTALL_DIR: /opt/uv/python
+      UV_PROJECT_ENVIRONMENT: /opt/workspace-bench/evaluation-venv
+      npm_config_cache: /tmp/npm-cache
+      PYTHONDONTWRITEBYTECODE: "1"
+    # No repository bind mount is declared here. The isolated launcher adds a
+    # per-task allowlist containing only runtime code, the sanitized current
+    # task view, one workspace seed, and one writable result directory.
+    tmpfs:
+      - /tmp:rw,size=${WORKSPACE_BENCH_TASK_TMPFS:-20480m},mode=1777
+
+volumes:
+  uv-cache:
+  npm-cache:
+  openclaw-home:

@@ -1,0 +1,254 @@
+{
+  "schema_version": 2,
+  "content_status": "full",
+  "role_cn": "运营人员",
+  "self_base": "u_ops",
+  "self_mail": "zhangmin@example.com",
+  "mail_account": {
+    "address": "zhangmin@example.com",
+    "login": "zhangmin",
+    "password": "mock-pass",
+    "display_name": "张敏"
+  },
+  "known_people": [
+    {
+      "base": "u_data",
+      "mail": "liran@example.com",
+      "typical_role": "数据口径/看板"
+    },
+    {
+      "base": "u_research",
+      "mail": "chenchen@example.com",
+      "typical_role": "研究/行业分析"
+    },
+    {
+      "base": "u_product",
+      "mail": "xunuo@example.com",
+      "typical_role": "产品需求/场景"
+    },
+    {
+      "base": "u_finance",
+      "mail": "zhaokai@example.com",
+      "typical_role": "预算/成本口径"
+    },
+    {
+      "base": "u_quality",
+      "mail": "sunqi@example.com",
+      "typical_role": "统计口径/质量"
+    },
+    {
+      "base": "u_market",
+      "mail": "wumin@example.com",
+      "typical_role": "市场投放/活动"
+    },
+    {
+      "base": "u_pmo",
+      "mail": "hejing@example.com",
+      "typical_role": "项目/计划收口"
+    },
+    {
+      "base": "u_dev",
+      "mail": "chengyiming@example.com",
+      "typical_role": "技术依赖/发布"
+    }
+  ],
+  "stable_groups": [
+    {
+      "group": "ops_daily",
+      "name": "产品运营部大群",
+      "members": [
+        "u_ops",
+        "u_data",
+        "u_research",
+        "u_product",
+        "u_market",
+        "u_pmo"
+      ],
+      "topics": "运营日常/数据看板/跨部门同步"
+    },
+    {
+      "group": "ops_data",
+      "name": "运营数据口径群",
+      "members": [
+        "u_ops",
+        "u_data",
+        "u_quality",
+        "u_research",
+        "u_finance"
+      ],
+      "topics": "数字口径/分母/统计规则"
+    },
+    {
+      "group": "ops_market",
+      "name": "市场与活动协同群",
+      "members": [
+        "u_ops",
+        "u_market",
+        "u_brand",
+        "u_product",
+        "u_pmo"
+      ],
+      "topics": "活动/投放/预算"
+    },
+    {
+      "group": "ops_plan",
+      "name": "运营计划收口群",
+      "members": [
+        "u_ops",
+        "u_pmo",
+        "u_product",
+        "u_dev",
+        "u_finance"
+      ],
+      "topics": "OKR/版本/计划闭环"
+    }
+  ],
+  "direct_threads": [
+    {
+      "peer": "u_data",
+      "topics": "数据看板/口径收口",
+      "is_primary_requester": true
+    },
+    {
+      "peer": "u_research",
+      "topics": "研究材料/行业分析"
+    },
+    {
+      "peer": "u_product",
+      "topics": "产品需求/优先级"
+    },
+    {
+      "peer": "u_finance",
+      "topics": "预算/成本口径"
+    },
+    {
+      "peer": "u_pmo",
+      "topics": "计划/OKR 闭环"
+    }
+  ],
+  "mail_contacts": [
+    {
+      "base": "u_data",
+      "address": "liran@example.com"
+    },
+    {
+      "base": "u_research",
+      "address": "chenchen@example.com"
+    },
+    {
+      "base": "u_product",
+      "address": "xunuo@example.com"
+    },
+    {
+      "base": "u_finance",
+      "address": "zhaokai@example.com"
+    },
+    {
+      "base": "u_quality",
+      "address": "sunqi@example.com"
+    },
+    {
+      "base": "u_market",
+      "address": "wumin@example.com"
+    },
+    {
+      "base": "u_pmo",
+      "address": "hejing@example.com"
+    },
+    {
+      "base": "u_dev",
+      "address": "chengyiming@example.com"
+    }
+  ],
+  "background": {
+    "backdate_ceiling": "2024-09-29T18:00:00+08:00",
+    "group_snippets": [
+      {
+        "group": "ops_daily",
+        "sender": "u_data",
+        "canonical_ts": "2024-09-04T10:00:00+08:00",
+        "text": "这个月的留存看板我刷新好了，分母按上周定的口径。"
+      },
+      {
+        "group": "ops_daily",
+        "sender": "u_market",
+        "canonical_ts": "2024-09-05T14:30:00+08:00",
+        "text": "下周那场直播活动的投放节奏我拉了个排期，回头同步。"
+      },
+      {
+        "group": "ops_data",
+        "sender": "u_quality",
+        "canonical_ts": "2024-09-09T11:00:00+08:00",
+        "text": "这批数据里只算有效行，状态严格等于已解决的才进统计。"
+      },
+      {
+        "group": "ops_data",
+        "sender": "u_finance",
+        "canonical_ts": "2024-09-10T16:00:00+08:00",
+        "text": "已实现和预计要分开，这个不能算进本期收益。"
+      },
+      {
+        "group": "ops_market",
+        "sender": "u_product",
+        "canonical_ts": "2024-09-11T09:30:00+08:00",
+        "text": "这个按 P1 走，用户视角我补一下场景描述。"
+      },
+      {
+        "group": "ops_plan",
+        "sender": "u_pmo",
+        "canonical_ts": "2024-09-12T15:00:00+08:00",
+        "text": "按 O/KR 层级看，这个是最终版，别再改了。"
+      },
+      {
+        "group": "ops_daily",
+        "sender": "u_research",
+        "canonical_ts": "2024-09-16T10:30:00+08:00",
+        "text": "收到，我按这个口径整理，再确认一下统计规则。"
+      },
+      {
+        "group": "ops_market",
+        "sender": "u_brand",
+        "canonical_ts": "2024-09-18T14:00:00+08:00",
+        "text": "这版偏品牌向，内容口径以策划案为准。"
+      }
+    ],
+    "mail_snippets": [
+      {
+        "mailbox": "INBOX",
+        "from": "u_data",
+        "to": [
+          "u_ops"
+        ],
+        "cc": [],
+        "canonical_ts": "2024-09-08T09:00:00+08:00",
+        "subject": "月度留存数据已更新",
+        "body_text": "张敏，本月留存数据已按最新口径更新到共享表，分母沿用上周口径。"
+      },
+      {
+        "mailbox": "Sent",
+        "from": "u_ops",
+        "to": [
+          "u_finance"
+        ],
+        "cc": [],
+        "canonical_ts": "2024-09-29T18:00:00+08:00",
+        "subject": "本月活动预算使用情况",
+        "body_text": "赵凯，本月活动预算使用明细已整理，麻烦核对后给我反馈。"
+      }
+    ],
+    "prior_task_fragments": []
+  },
+  "interleave": {
+    "policy": "cross_task",
+    "note": "同一张敏的各 task fixture 共享 stable_groups/direct_threads/mail_contacts；不同 task 线程按绝对时间在稳定群里交错。背景只注入良性文本片段。"
+  },
+  "id_conventions": {
+    "wecom_user": "u_<base>_<task_id>",
+    "direct_chat": "id 必须等于对方 userid",
+    "group_chat": "chat_<task_id>_<stable_group_slug>",
+    "media": "media_<task_id>_<slug>",
+    "doc": "doc_<task_id>_<slug>",
+    "mail_msg": "m_<task_id>_<slug>",
+    "mail_att": "att_<task_id>_<slug>"
+  }
+}

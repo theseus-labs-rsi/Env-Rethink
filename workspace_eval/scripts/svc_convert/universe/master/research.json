@@ -1,0 +1,274 @@
+{
+  "schema_version": 2,
+  "content_status": "full",
+  "role_cn": "研究人员",
+  "self_base": "u_research",
+  "self_mail": "chenchen@example.com",
+  "mail_account": {
+    "address": "chenchen@example.com",
+    "login": "chenchen",
+    "password": "mock-pass",
+    "display_name": "陈晨"
+  },
+  "known_people": [
+    {
+      "base": "u_ops",
+      "mail": "zhangmin@example.com",
+      "typical_role": "任务发起人/运营收口"
+    },
+    {
+      "base": "u_quality",
+      "mail": "sunqi@example.com",
+      "typical_role": "统计口径/数据质量"
+    },
+    {
+      "base": "u_data",
+      "mail": "liran@example.com",
+      "typical_role": "数据分析/数字口径"
+    },
+    {
+      "base": "u_dev",
+      "mail": "chengyiming@example.com",
+      "typical_role": "技术/依赖发布"
+    },
+    {
+      "base": "u_product",
+      "mail": "xunuo@example.com",
+      "typical_role": "产品需求/场景"
+    },
+    {
+      "base": "u_admin",
+      "mail": "suwen@example.com",
+      "typical_role": "行政支持"
+    },
+    {
+      "base": "u_finance",
+      "mail": "zhaokai@example.com",
+      "typical_role": "预算/成本口径"
+    },
+    {
+      "base": "u_hr",
+      "mail": "chenjing@example.com",
+      "typical_role": "HR 协同"
+    },
+    {
+      "base": "u_editor",
+      "mail": "gaoxiang@example.com",
+      "typical_role": "稿件审校/口径"
+    },
+    {
+      "base": "u_consult",
+      "mail": "baiyang@example.com",
+      "typical_role": "外部行业顾问"
+    }
+  ],
+  "stable_groups": [
+    {
+      "group": "research_review",
+      "name": "战略研究部 Q1 复盘群",
+      "members": [
+        "u_research",
+        "u_ops",
+        "u_quality",
+        "u_data",
+        "u_admin"
+      ],
+      "topics": "研究复盘/口径确认/跨部门收口"
+    },
+    {
+      "group": "research_dept",
+      "name": "战略研究部大群",
+      "members": [
+        "u_research",
+        "u_ops",
+        "u_data",
+        "u_quality",
+        "u_editor",
+        "u_product"
+      ],
+      "topics": "通知/资料共享/日常背景"
+    },
+    {
+      "group": "data_review",
+      "name": "数据与口径协同群",
+      "members": [
+        "u_research",
+        "u_data",
+        "u_quality",
+        "u_finance"
+      ],
+      "topics": "数字口径/统计规则/复核"
+    },
+    {
+      "group": "tech_research",
+      "name": "技术研究协同群",
+      "members": [
+        "u_research",
+        "u_dev",
+        "u_eng",
+        "u_product"
+      ],
+      "topics": "技术依赖/行业研究交叉"
+    },
+    {
+      "group": "content_review",
+      "name": "内容审校对接群",
+      "members": [
+        "u_research",
+        "u_editor",
+        "u_ops",
+        "u_product",
+        "u_consult"
+      ],
+      "topics": "报告稿件/口径/定稿"
+    }
+  ],
+  "direct_threads": [
+    {
+      "peer": "u_ops",
+      "topics": "布置任务/收口/部门对接",
+      "is_primary_requester": true
+    },
+    {
+      "peer": "u_data",
+      "topics": "数字口径/复核"
+    },
+    {
+      "peer": "u_quality",
+      "topics": "统计规则/缺陷口径"
+    },
+    {
+      "peer": "u_editor",
+      "topics": "稿件审校/定稿"
+    },
+    {
+      "peer": "u_consult",
+      "topics": "外部行业观点"
+    }
+  ],
+  "mail_contacts": [
+    {
+      "base": "u_ops",
+      "address": "zhangmin@example.com"
+    },
+    {
+      "base": "u_quality",
+      "address": "sunqi@example.com"
+    },
+    {
+      "base": "u_data",
+      "address": "liran@example.com"
+    },
+    {
+      "base": "u_dev",
+      "address": "chengyiming@example.com"
+    },
+    {
+      "base": "u_product",
+      "address": "xunuo@example.com"
+    },
+    {
+      "base": "u_finance",
+      "address": "zhaokai@example.com"
+    },
+    {
+      "base": "u_editor",
+      "address": "gaoxiang@example.com"
+    },
+    {
+      "base": "u_consult",
+      "address": "baiyang@example.com"
+    }
+  ],
+  "background": {
+    "backdate_ceiling": "2026-01-30T17:45:00+08:00",
+    "group_snippets": [
+      {
+        "group": "research_dept",
+        "sender": "u_ops",
+        "canonical_ts": "2026-01-05T09:30:00+08:00",
+        "text": "一季度复盘会改到下周二，材料模板我发群里了。"
+      },
+      {
+        "group": "research_dept",
+        "sender": "u_editor",
+        "canonical_ts": "2026-01-12T15:00:00+08:00",
+        "text": "这期行业周报我排上版了，数据引用处都标了来源。"
+      },
+      {
+        "group": "research_review",
+        "sender": "u_data",
+        "canonical_ts": "2026-01-14T11:00:00+08:00",
+        "text": "上季度那批样本的分母我核过了，按 88 家算。"
+      },
+      {
+        "group": "data_review",
+        "sender": "u_quality",
+        "canonical_ts": "2026-01-15T14:20:00+08:00",
+        "text": "统计规则更新了一版，只算有效行，状态必须严格等于已解决。"
+      },
+      {
+        "group": "research_review",
+        "sender": "u_ops",
+        "canonical_ts": "2026-01-20T10:00:00+08:00",
+        "text": "这次研究收口按部门、分支机构和项目部三个层级来，行政侧需要行政部自己承担的部分单独列。"
+      },
+      {
+        "group": "content_review",
+        "sender": "u_editor",
+        "canonical_ts": "2026-01-22T16:40:00+08:00",
+        "text": "稿件以定稿版为准，数据引用要标来源，我让编辑那边再过一遍。"
+      },
+      {
+        "group": "tech_research",
+        "sender": "u_dev",
+        "canonical_ts": "2026-01-26T09:15:00+08:00",
+        "text": "发布窗口见排期，根因要看代码路径，别先下结论。"
+      },
+      {
+        "group": "content_review",
+        "sender": "u_consult",
+        "canonical_ts": "2026-01-28T11:30:00+08:00",
+        "text": "以下是我个人判断，行业口径以报告为准。"
+      }
+    ],
+    "mail_snippets": [
+      {
+        "mailbox": "INBOX",
+        "from": "u_ops",
+        "to": [
+          "u_research"
+        ],
+        "cc": [],
+        "canonical_ts": "2026-01-16T09:30:00+08:00",
+        "subject": "一季度复盘材料提醒",
+        "body_text": "陈晨，复盘材料按群里最新版整理，下周二前给我。"
+      },
+      {
+        "mailbox": "Sent",
+        "from": "u_research",
+        "to": [
+          "u_editor"
+        ],
+        "cc": [],
+        "canonical_ts": "2026-01-30T17:45:00+08:00",
+        "subject": "行业周报数据校对",
+        "body_text": "高翔，周报里数字口径我核过了，麻烦按最新版排版。"
+      }
+    ],
+    "prior_task_fragments": []
+  },
+  "interleave": {
+    "policy": "cross_task",
+    "note": "同一陈晨的各 task fixture 共享 stable_groups/direct_threads/mail_contacts；不同 task 线程按绝对时间在稳定群里交错。背景只注入良性文本片段。"
+  },
+  "id_conventions": {
+    "wecom_user": "u_<base>_<task_id>",
+    "direct_chat": "id 必须等于对方 userid",
+    "group_chat": "chat_<task_id>_<stable_group_slug>",
+    "media": "media_<task_id>_<slug>",
+    "doc": "doc_<task_id>_<slug>",
+    "mail_msg": "m_<task_id>_<slug>",
+    "mail_att": "att_<task_id>_<slug>"
+  }
+}

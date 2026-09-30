@@ -1,0 +1,901 @@
+import json
+from tqdm import tqdm  # 添加 tqdm 导入语句
+
+import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import os
+import random
+import re
+import shutil
+import time
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
+import yaml
+
+# We reuse dependency-graph builder and metadata helpers to keep I/O aligned.
+import agent_eval as _ae
+from provider_auth import load_dotenv, provider_has_credentials
+
+# ClaudeCode baseline runner (wraps evaluation_sys/baselines/ClaudeCode.js).
+from agents import claudecode as _claudecode
+
+
+Json = Any
+
+LANGUAGE_ALIASES = {
+    "en": "en",
+    "cn": "cn",
+    "zh": "cn",
+}
+
+
+def _normalize_language_value(value: Json) -> Optional[str]:
+    key = str(value or "").strip().lower()
+    if not key:
+        return None
+    return LANGUAGE_ALIASES.get(key)
+
+
+def _is_cjk(ch: str) -> bool:
+    code = ord(ch)
+    return (
+        0x3400 <= code <= 0x4DBF
+        or 0x4E00 <= code <= 0x9FFF
+        or 0xF900 <= code <= 0xFAFF
+        or 0x20000 <= code <= 0x2A6DF
+        or 0x2A700 <= code <= 0x2B73F
+        or 0x2B740 <= code <= 0x2B81F
+        or 0x2B820 <= code <= 0x2CEAF
+    )
+
+
+def _flatten_language_values(value: Json) -> List[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        out: List[str] = []
+        for item in value:
+            out.extend(_flatten_language_values(item))
+        return out
+    if isinstance(value, dict):
+        out: List[str] = []
+        for item in value.values():
+            out.extend(_flatten_language_values(item))
+        return out
+    return []
+
+
+def _detect_language_from_text(*values: Json) -> str:
+    text = "\n".join(part for value in values for part in _flatten_language_values(value))
+    cjk = 0
+    latin = 0
+    for ch in text:
+        if _is_cjk(ch):
+            cjk += 1
+        elif ("a" <= ch <= "z") or ("A" <= ch <= "Z"):
+            latin += 1
+    denom = cjk + latin
+    if cjk >= 8 and denom > 0 and (cjk / denom) >= 0.08:
+        return "cn"
+    return "en"
+
+
+def _language_signal_present(*values: Json) -> bool:
+    text = "\n".join(part for value in values for part in _flatten_language_values(value))
+    return any(_is_cjk(ch) or ("a" <= ch <= "z") or ("A" <= ch <= "Z") for ch in text)
+
+
+def _language_warning(task_id: Json, message: str) -> str:
+    prefix = f"task {task_id}: " if task_id else ""
+    return f"[language-warning] {prefix}{message}"
+
+
+def _resolve_language_info(meta: Dict[str, Json]) -> Dict[str, Json]:
+    values = [meta.get("task"), meta.get("rubrics"), meta.get("rubric_types")]
+    detected = _detect_language_from_text(*values)
+    has_signal = _language_signal_present(*values)
+    raw_meta_language = meta.get("language")
+    meta_language = _normalize_language_value(raw_meta_language)
+    task_id = meta.get("id")
+
+    if raw_meta_language not in (None, "") and meta_language is None:
+        warning = _language_warning(
+            task_id,
+            f"unsupported metadata language {raw_meta_language!r}; falling back to content detection",
+        )
+        return {
+            "language": detected if has_signal else "en",
+            "source": "detected" if has_signal else "default",
+            "warning": warning,
+        }
+
+    if meta_language:
+        warning = None
+        if has_signal and detected != meta_language:
+            warning = _language_warning(
+                task_id,
+                f"metadata language {meta_language!r} conflicts with content-detected {detected!r}; using metadata",
+            )
+        return {"language": meta_language, "source": "metadata", "warning": warning}
+
+    if has_signal:
+        return {"language": detected, "source": "detected", "warning": None}
+    return {"language": "en", "source": "default", "warning": None}
+
+
+def _infer_language_from_meta(meta: Dict[str, Json]) -> str:
+    return str(_resolve_language_info(meta).get("language") or "en")
+
+
+def _judge_system_prompt(language: str) -> str:
+    if (_normalize_language_value(language) or "en") == "cn":
+        return "你是一个严格的任务评测员。"
+    return "You are a strict task evaluator."
+
+
+def _iso_now() -> str:
+    return datetime.now(tz=timezone.utc).isoformat()
+
+
+def _read_yaml(path: str) -> Dict[str, Json]:
+    with open(path, "r", encoding="utf-8") as f:
+        obj = yaml.safe_load(f)
+    return _expand_config_env(obj) if isinstance(obj, dict) else {}
+
+
+def _expand_env_string(value: str) -> str:
+    fallback_re = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)[:-]-(\$\{[A-Za-z_][A-Za-z0-9_]*\}|[^}]*)\}")
+    s = value
+    while True:
+        m = fallback_re.search(s)
+        if not m:
+            break
+        primary = os.environ.get(m.group(1), "")
+        fallback = m.group(2)
+        repl = primary if primary else os.path.expandvars(fallback)
+        s = s[: m.start()] + repl + s[m.end() :]
+    return os.path.expandvars(s)
+
+
+def _expand_config_env(value: Json) -> Json:
+    if isinstance(value, str):
+        return _expand_env_string(value)
+    if isinstance(value, list):
+        return [_expand_config_env(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _expand_config_env(v) for k, v in value.items()}
+    return value
+
+
+def _safe_load_json(path: str) -> Optional[Json]:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _write_json(path: str, obj: Json) -> None:
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+
+
+def _write_text(path: str, text: str) -> None:
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(str(text or ""))
+
+
+def _truncate_str(s: str, max_len: int = 2000) -> str:
+    if not isinstance(s, str):
+        return str(s)
+    if len(s) <= max_len:
+        return s
+    return s[:max_len] + "...[truncated]"
+
+
+def _json_first_object(text: str) -> Optional[Json]:
+    """From a blob of text, extract the first JSON object/array."""
+    s = str(text or "").lstrip()
+    if not s:
+        return None
+    pos1 = s.find("{")
+    pos2 = s.find("[")
+    pos = pos1 if pos2 == -1 else (pos2 if pos1 == -1 else min(pos1, pos2))
+    if pos == -1:
+        return None
+    try:
+        obj, _ = json.JSONDecoder().raw_decode(s[pos:])
+        return obj
+    except Exception:
+        return None
+
+
+def _normalize_rubric_rows(
+    judged_items: Json,
+    rubrics: List[Json],
+) -> List[Json]:
+    """Keep at most one valid judge result for each configured rubric."""
+    if not isinstance(judged_items, list):
+        return []
+    rows_by_index: Dict[int, Json] = {}
+    for item in judged_items:
+        if not isinstance(item, dict):
+            continue
+        index = item.get("index")
+        if not isinstance(index, int) or index < 0 or index >= len(rubrics):
+            continue
+        passed = item.get("passed")
+        confidence = item.get("confidence")
+        evidence = item.get("evidence")
+        rows_by_index[index] = {
+            "index": index,
+            "rubric": rubrics[index] if isinstance(rubrics[index], str) else None,
+            "passed": bool(passed) if isinstance(passed, bool) else False,
+            "confidence": (
+                float(confidence)
+                if isinstance(confidence, (int, float))
+                else None
+            ),
+            "evidence": str(evidence) if isinstance(evidence, str) else "",
+        }
+    return [rows_by_index[index] for index in sorted(rows_by_index)]
+
+
+def _complete_rubric_rows(
+    rows: List[Json],
+    rubrics: List[Json],
+    *,
+    error: str,
+) -> List[Json]:
+    """Fill omitted rubric indices as failures so the denominator stays fixed."""
+    rows_by_index = {
+        int(row["index"]): row
+        for row in rows
+        if isinstance(row, dict) and isinstance(row.get("index"), int)
+    }
+    for index, rubric in enumerate(rubrics):
+        if index in rows_by_index:
+            continue
+        rows_by_index[index] = {
+            "index": index,
+            "rubric": rubric if isinstance(rubric, str) else None,
+            "passed": False,
+            "confidence": 0.0,
+            "evidence": (
+                "Judge omitted this configured rubric from its structured "
+                f"response. {error}"
+            ).strip(),
+        }
+    return [rows_by_index[index] for index in range(len(rubrics))]
+
+
+def _safe_remove_path(path: str) -> None:
+    try:
+        if os.path.islink(path) or os.path.isfile(path):
+            os.unlink(path)
+        elif os.path.isdir(path):
+            shutil.rmtree(path)
+    except FileNotFoundError:
+        return
+
+
+def _symlink_or_copy(src: str, dst: str, *, prefer_copy: bool = True) -> None:
+    """把 src 物化到 judge view 的 dst。
+
+    默认**复制**而不是建软链。原因：被判分的 agent 本身也是 Claude Code，
+    它侦察工作区用的 `Glob **/*` **不会跟随目录软链**，于是第一次
+    `ls` 式枚举就看不到 `candidate_output/`；接下来它是否补救（显式再
+    Glob 一次 candidate_output）**纯属随机**。实测同一模型同一构造器：
+      task100 显式探测 -> 读到文档 -> 24/24
+      task85  直接下结论 -> "candidate_output does not exist" -> 0/51
+    软链能让已判分的 case 静默变 0，所以这里以正确性优先，复制失败才退回软链。
+    """
+    _safe_remove_path(dst)
+    os.makedirs(os.path.dirname(os.path.abspath(dst)), exist_ok=True)
+    if prefer_copy:
+        try:
+            if os.path.isdir(src):
+                shutil.copytree(src, dst)
+            else:
+                shutil.copy2(src, dst)
+            return
+        except Exception:
+            _safe_remove_path(dst)
+    try:
+        os.symlink(src, dst)
+        return
+    except Exception:
+        pass
+    if os.path.isdir(src):
+        shutil.copytree(src, dst)
+    else:
+        shutil.copy2(src, dst)
+
+
+def _resolve_original_task_source(
+    meta: Dict[str, Json],
+    *,
+    task_dir: Optional[str] = None,
+) -> Optional[str]:
+    if isinstance(task_dir, str) and task_dir.strip():
+        staged = os.path.join(os.path.abspath(task_dir), "input_source")
+        if os.path.isdir(os.path.join(staged, "data")):
+            return staged
+    mp = meta.get("__metadata_path")
+    if isinstance(mp, str) and mp.strip():
+        d = os.path.dirname(os.path.abspath(mp))
+        if os.path.isdir(d):
+            return d
+    return None
+
+
+def _sanitize_data_manifest_for_judge(value: Json) -> Json:
+    """Hide dataset-construction labels while preserving inspectable inputs.
+
+    Fields such as ``input_role`` and ``version_role`` are useful for dataset
+    maintenance, but exposing them to the judge would reveal which files are
+    intended as standard inputs versus distractors.  The candidate agent never
+    receives these metadata labels, so the judge should not receive them
+    either.
+    """
+
+    if not isinstance(value, list):
+        return value
+    hidden_fields = {
+        "input_role",
+        "version_role",
+        "artifact_id",
+        "noise_kind",
+        "generated_by",
+        "generation_mode",
+        "job_id",
+    }
+    sanitized: List[Json] = []
+    for item in value:
+        if not isinstance(item, dict):
+            sanitized.append(item)
+            continue
+        sanitized.append(
+            {key: item_value for key, item_value in item.items() if key not in hidden_fields}
+        )
+    return sanitized
+
+
+def _build_trace_snapshot(task_dir: str) -> Dict[str, Json]:
+    """Build the field-filtered execution snapshot exposed to the judge agent."""
+    agent_json = _safe_load_json(os.path.join(task_dir, "agent.json"))
+    if not isinstance(agent_json, dict):
+        return {"taskDir": os.path.abspath(task_dir), "workDir": None, "events": []}
+
+    work_dir = agent_json.get("workDir") if isinstance(agent_json.get("workDir"), str) else None
+    trace = agent_json.get("trace")
+    execution_trace = (
+        trace.get("executionTrace")
+        if isinstance(trace, dict) and isinstance(trace.get("executionTrace"), list)
+        else []
+    )
+    workspace_services = (
+        trace.get("workspaceServices")
+        if isinstance(trace, dict) and isinstance(trace.get("workspaceServices"), dict)
+        else None
+    )
+
+    events: List[Dict[str, Json]] = []
+    for item in execution_trace:
+        if not isinstance(item, dict):
+            continue
+        ev_type = item.get("type")
+        if ev_type == "tool":
+            events.append(
+                {
+                    "type": "tool",
+                    "tool": item.get("tool"),
+                    "input": item.get("input") if isinstance(item.get("input"), dict) else {},
+                    "output": item.get("output") if isinstance(item.get("output"), dict) else {},
+                    "timestamp": item.get("timestamp"),
+                }
+            )
+        elif ev_type == "text":
+            content = item.get("content")
+            if isinstance(content, str):
+                events.append(
+                    {
+                        "type": "text",
+                        "role": item.get("role"),
+                        "content": content,
+                        "timestamp": item.get("timestamp"),
+                    }
+                )
+
+    snapshot = {
+        "taskDir": os.path.abspath(task_dir),
+        "workDir": work_dir,
+        "events": events,
+    }
+    if workspace_services is not None:
+        snapshot["workspaceServices"] = workspace_services
+    return snapshot
+
+
+def _prepare_judge_view(*, sandbox_try_dir: str, task_dir: str, meta: Dict[str, Json]) -> Dict[str, str]:
+    """
+    Build a restricted judge workspace so ClaudeCode can see:
+    - original inputs from tasks/<case>/data
+    - candidate outputs from task_dir/output
+    - a field-filtered execution trace snapshot from task_dir/agent.json
+    But it should not see tasks/<case>/output or output_cc (GT-like answers).
+    """
+    view_dir = os.path.join(sandbox_try_dir, "judge_view")
+    os.makedirs(view_dir, exist_ok=True)
+
+    out: Dict[str, str] = {"view_dir": view_dir}
+
+    source_task_dir = _resolve_original_task_source(meta, task_dir=task_dir)
+    if source_task_dir:
+        out["source_task_dir"] = source_task_dir
+        inputs_dir = os.path.join(source_task_dir, "data")
+        if os.path.isdir(inputs_dir):
+            dst = os.path.join(view_dir, "inputs")
+            _symlink_or_copy(inputs_dir, dst)
+            out["inputs_visible_path"] = dst
+
+        # Copy a sanitized metadata snapshot for context, but do not expose the original task root.
+        meta_out_path = os.path.join(view_dir, "original_task_metadata.json")
+        _write_json(
+            meta_out_path,
+            {
+                "id": meta.get("id"),
+                "task": meta.get("task"),
+                "steps": meta.get("steps"),
+                "rubrics": meta.get("rubrics"),
+                "rubric_types": meta.get("rubric_types"),
+                "rubric_reference": meta.get("rubric_reference"),
+                "language": meta.get("language"),
+                "output_files": meta.get("output_files"),
+                "data": meta.get("data"),
+                "data_manifest": _sanitize_data_manifest_for_judge(
+                    meta.get("data_manifest")
+                ),
+                "__metadata_path": meta.get("__metadata_path"),
+            },
+        )
+        out["original_task_metadata_path"] = meta_out_path
+
+    candidate_output_dir = os.path.join(task_dir, "output")
+    if os.path.isdir(candidate_output_dir):
+        dst = os.path.join(view_dir, "candidate_output")
+        _symlink_or_copy(candidate_output_dir, dst)
+        out["candidate_output_path"] = dst
+
+    trace_snapshot_path = os.path.join(view_dir, "trace_snapshot.json")
+    _write_json(trace_snapshot_path, _build_trace_snapshot(task_dir))
+    out["trace_snapshot_path"] = trace_snapshot_path
+
+    # Also provide a small README to steer the judge away from GT-like dirs.
+    readme_path = os.path.join(view_dir, "README.txt")
+    _write_text(
+        readme_path,
+        "\n".join(
+            [
+                "This is a restricted evaluation workspace for agent-as-a-judge.",
+                "",
+                "- inputs/: original input files for this task (NOT ground truth answers)",
+                "- candidate_output/: outputs produced by the tested agent (evaluate THIS directory if present)",
+                "- trace_snapshot.json: field-filtered execution evidence from the tested agent (inspect if process evidence is useful)",
+                "",
+                "Do NOT use any other directories as answers.",
+            ]
+        )
+        + "\n",
+    )
+    out["readme_path"] = readme_path
+
+    return out
+
+
+def _build_judge_prompt(
+    *,
+    task_id: str,
+    task_dir: str,
+    meta: Dict[str, Json],
+    judge_view: Dict[str, str],
+    language: str,
+) -> str:
+    """
+    Prompt the ClaudeCode agent to do filesystem-heavy evaluation and emit only JSON.
+    """
+    rubrics = meta.get("rubrics")
+    rubric_reference = meta.get("rubric_reference")
+    steps = meta.get("steps")
+    task = meta.get("task")
+    data = meta.get("data")
+
+    language = _normalize_language_value(language) or "en"
+    if language == "cn":
+        instructions = [
+            "你是一个严格的任务评测员（agent-as-a-judge）。",
+            "你当前真正可访问的工作目录是 judgeView.cwd，而不是 task JSON 里的系统绝对路径。",
+            "为了避免误看 ground truth，judgeView 里只暴露了允许评估的内容：inputs/（原始输入文件）、candidate_output/（待评估输出目录，如果存在）、trace_snapshot.json（被测 agent 的字段裁剪执行轨迹，如果存在）。",
+            "禁止把原始任务目录里的 output/output_cc/gt 等目录当成答案来源；本次只允许评估 judgeView.candidateOutputPath 中的结果。",
+            "inputs/ 仅用于查看原始输入文件和理解任务，不是标准答案目录。",
+            "trace_snapshot.json 是被测 agent 的执行证据，不是标准答案；如果需要了解 agent 如何完成任务，请自行读取该文件，不要假设它的内容。",
+            "只能基于你实际检查到的文件/目录/文件内容给出判断，不要凭空假设。",
+            "rubricReference 是内部评分参考，不是候选答案。它可包含精确期望值、语义要求和来源提示；你仍须实际检查 candidate_output 与 trace_snapshot，不能因为参考中给出期望值就直接判通过。",
+            "rubricReference.condition 的语义：task-only 表示任务描述已直接要求；workspace-extended 表示需要结合任务描述探索工作区或企业微信后才能严格得到；bonus 表示存在其他同样合理但不完全一致的方案。对于 bonus rubric，应按核心价值等价性判断，不要要求候选结果机械匹配参考示例。",
+            "rubricReference.reason 解释该 rubric 为什么合理、为何属于对应 condition；请把它作为判定边界说明，而不是候选答案证据。",
+            "你需要自己决定要检查的具体路径（例如用 ls/find/grep 等），并在 evidence 中写明你检查的路径与观察到的现象。",
+            "最终只输出一个 JSON 对象，格式必须为："
+            "{ \"rubrics\": [ {\"index\":0,\"passed\":true,\"confidence\":0.8,\"evidence\":\"...\"}, ... ] }",
+            "如果证据不足：passed=false，evidence 写清楚缺什么证据。",
+        ]
+        prefix = (
+            "请基于以下输入 JSON 完成 rubrics 评估。\n"
+            "注意：最后一行开始请只输出 JSON 对象，不要输出其他文字。\n\n"
+        )
+    else:
+        instructions = [
+            "You are a strict task evaluator (agent-as-a-judge).",
+            "Your actual accessible working directory is judgeView.cwd, not any absolute system path in the task JSON.",
+            "To avoid seeing ground truth, judgeView exposes only approved evaluation content: inputs/ (original input files), candidate_output/ (candidate outputs, if present), and trace_snapshot.json (the field-filtered tested-agent execution trace, if present).",
+            "Do not use output/output_cc/gt or similar directories from the original task directory as answer sources; evaluate only judgeView.candidateOutputPath for this run.",
+            "inputs/ is only for inspecting original input files and understanding the task; it is not a ground-truth answer directory.",
+            "trace_snapshot.json is execution evidence, not a ground-truth answer. If process evidence is useful, inspect this file yourself; do not assume its contents.",
+            "Base judgments only on files, directories, and contents you actually inspect; do not assume facts.",
+            "rubricReference is internal scoring guidance, not a candidate answer. It may contain exact expected values, semantic criteria, and source hints; you must still inspect candidate_output and trace_snapshot rather than passing a rubric merely because the reference states an expectation.",
+            "rubricReference.condition semantics: task-only means the task description directly requires it; workspace-extended means it becomes strictly derivable only after exploring the workspace or WeCom in light of the task; bonus means other materially valid but non-identical solutions may exist. For bonus rubrics, judge core-value equivalence rather than exact conformity to the reference example.",
+            "rubricReference.reason explains why the rubric is reasonable and why it has that condition; use it as a decision-boundary explanation, not as evidence that the candidate passed.",
+            "Decide which paths to inspect yourself (for example with ls/find/grep), and in evidence state the checked paths and observed facts.",
+            "Output only one JSON object in this exact shape: "
+            "{ \"rubrics\": [ {\"index\":0,\"passed\":true,\"confidence\":0.8,\"evidence\":\"...\"}, ... ] }",
+            "If evidence is insufficient: passed=false and explain what evidence is missing.",
+        ]
+        prefix = (
+            "Evaluate the rubrics using the input JSON below.\n"
+            "Important: starting on the final line, output only the JSON object with no other text.\n\n"
+        )
+
+    # Keep prompt concise but actionable to reduce token usage (ClaudeCode will inspect by tools/CLI).
+    payload = {
+        "taskId": task_id,
+        "task": task,
+        "steps": steps,
+        "rubrics": rubrics,
+        "rubricReference": rubric_reference,
+        "taskDir": task_dir,
+        "data": data,
+        "judgeView": {
+            "cwd": judge_view.get("view_dir"),
+            "inputsPath": judge_view.get("inputs_visible_path"),
+            "originalTaskMetadataPath": judge_view.get("original_task_metadata_path"),
+            "candidateOutputPath": judge_view.get("candidate_output_path"),
+            "traceSnapshotPath": judge_view.get("trace_snapshot_path"),
+        },
+        "instructions": instructions,
+    }
+    return prefix + json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+def evaluate_task(
+    task_dir: str,
+    *,
+    eval_yaml_path: str,
+    overwrite: bool = False,
+    max_retries: int = 6,
+    max_str_len: int = 2000,
+    max_trace_items: int = 30,
+    max_output_files: int = 10,
+) -> Dict[str, Json]:
+    """
+    I/O-compatible with evaluation_sys/src/agent_eval.py:evaluate_task,
+    but uses ClaudeCode.js (agent) to inspect the filesystem and judge rubrics.
+
+    Outputs:
+      - rubrics_judge--{model_name}.json
+      - dependency_graph--{model_name}.json
+    """
+    task_dir = os.path.abspath(task_dir)
+    eval_yaml_path = os.path.abspath(eval_yaml_path)
+    eval_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    load_dotenv(os.path.join(eval_root, ".env"), os.path.join(os.getcwd(), ".env"))
+
+    if not os.path.isdir(task_dir):
+        return {"error": f"Task directory not found: {task_dir}", "success": False}
+    if not os.path.isfile(eval_yaml_path):
+        return {"error": f"Eval YAML file not found: {eval_yaml_path}", "success": False}
+
+    if not os.path.exists(os.path.join(task_dir, "output")):
+        return {"error": f"Output directory not found: {os.path.join(task_dir, 'output')}", "success": False}
+
+    eval_cfg = _read_yaml(eval_yaml_path)
+    base_url = eval_cfg.get("baseUrl")
+    model = eval_cfg.get("model")
+    api_key = eval_cfg.get("apiKey")
+    model_name = eval_cfg.get("model_name") or model or "unknown"
+    try:
+        judge_timeout_sec = max(
+            60.0,
+            float(eval_cfg.get("judgeTimeoutSec") or 600.0),
+        )
+    except (TypeError, ValueError):
+        judge_timeout_sec = 600.0
+
+    if not base_url or not model or not provider_has_credentials(eval_cfg):
+        return {"error": "Missing baseUrl, model, or provider credentials in eval YAML", "success": False}
+
+    task_id = os.path.basename(task_dir)
+    kind = _ae._detect_agent_kind(task_dir)
+    meta = _ae._load_task_metadata(task_dir)
+    if meta is None:
+        return {"error": "metadata.json not found or missing rubrics", "success": False, "taskId": task_id}
+
+    rubrics = meta.get("rubrics")
+    if not isinstance(rubrics, list) or not rubrics:
+        return {"error": "No rubrics found in metadata", "success": False, "taskId": task_id}
+
+    language_info = _resolve_language_info(meta)
+    language = str(language_info.get("language") or "en")
+    language_warning = language_info.get("warning")
+    if isinstance(language_warning, str) and language_warning:
+        print(language_warning, flush=True)
+
+    rubrics_out_path = os.path.join(task_dir, f"rubrics_judge--{model_name}.json")
+    dep_graph_out_path = os.path.join(task_dir, f"dependency_graph--{model_name}.json")
+
+    result: Dict[str, Json] = {
+        "taskId": task_id,
+        "taskDir": task_dir,
+        "evalModel": model_name,
+        "evalYamlPath": eval_yaml_path,
+        "success": True,
+    }
+
+    if not overwrite and os.path.exists(rubrics_out_path):
+        result["rubricsSkipped"] = True
+    else:
+        sys_prompt = _judge_system_prompt(language)
+
+        # Use a dedicated sandbox under task_dir/raw to keep judge artifacts nearby.
+        sandbox_dir = os.path.join(task_dir, "raw", "agent_as_a_judge")
+        os.makedirs(sandbox_dir, exist_ok=True)
+
+        api_provider = dict(eval_cfg)
+        api_provider.update(
+            {
+                "provider_type": "anthropic",
+                "baseUrl": str(base_url),
+                "model": str(model),
+                "model_name": str(model_name),
+            }
+        )
+
+        started = time.time()
+        tries = 0
+        err = ""
+        last_text = ""
+        usage = None
+        rows: List[Json] = []
+
+        while True:
+            tries += 1
+            sandbox_try_dir = os.path.join(sandbox_dir, f"try_{tries}")
+            judge_view = _prepare_judge_view(
+                sandbox_try_dir=sandbox_try_dir,
+                task_dir=task_dir,
+                meta=meta,
+            )
+            prompt = _build_judge_prompt(
+                task_id=task_id,
+                task_dir=task_dir,
+                meta=meta,
+                judge_view=judge_view,
+                language=language,
+            )
+            run_out = _claudecode.run(
+                prompt=sys_prompt + "\n\n" + prompt,
+                work_dir=judge_view["view_dir"],
+                sandbox_dir=sandbox_try_dir,
+                timeout_s=judge_timeout_sec,
+                api_provider=api_provider,
+                agent_id="ClaudeCode.js",
+            )
+
+            duration_ms = int((time.time() - started) * 1000)
+            tr = run_out.get("trace") if isinstance(run_out, dict) else None
+            if isinstance(tr, dict) and isinstance(tr.get("usageTotal"), dict):
+                usage = tr.get("usageTotal")
+            last_text = tr.get("lastText") if isinstance(tr, dict) and isinstance(tr.get("lastText"), str) else ""
+
+            judged_obj = _json_first_object(last_text)
+            if isinstance(judged_obj, dict) and isinstance(judged_obj.get("rubrics"), list):
+                candidate_rows = _normalize_rubric_rows(
+                    judged_obj.get("rubrics"),
+                    rubrics,
+                )
+                if len(candidate_rows) == len(rubrics):
+                    rows = candidate_rows
+                    err = (
+                        ""
+                        if run_out.get("status") == "ok"
+                        else str(run_out.get("errorMessage") or "")[:2000]
+                    )
+                    break
+                rows = candidate_rows
+                err = (
+                    "Judge returned "
+                    f"{len(candidate_rows)} of {len(rubrics)} configured "
+                    "rubric rows."
+                )
+
+            if not err:
+                err = str(
+                    run_out.get("errorMessage")
+                    or "Judge output parse failed"
+                )[:2000]
+            if tries >= max_retries:
+                break
+
+            # Backoff a bit to reduce rate-limit failures.
+            time.sleep(min(60, 2 ** (tries - 1) + random.random()))
+
+        if not rows:
+            for i, r in enumerate(rubrics):
+                if not isinstance(r, str):
+                    continue
+                rows.append({"index": i, "rubric": r, "passed": False, "confidence": 0.0, "evidence": f"ClaudeCode judge failed: {err}"})
+        elif len(rows) != len(rubrics):
+            rows = _complete_rubric_rows(rows, rubrics, error=err)
+
+        passed_n = len([x for x in rows if isinstance(x, dict) and x.get("passed") is True])
+        failed_n = len(rows) - passed_n
+
+        _write_json(
+            rubrics_out_path,
+            {
+                "taskId": task_id,
+                "agentKind": kind,
+                "createdAt": _iso_now(),
+                "rubrics": sorted(
+                    rows,
+                    key=lambda x: int(x.get("index")) if isinstance(x, dict) and isinstance(x.get("index"), int) else 10**9,
+                ),
+                "summary": {"total": len(rows), "passed": passed_n, "failed": failed_n},
+                "judge": {
+                    "model": model,
+                    "modelName": model_name,
+                    "baseUrl": base_url,
+                    "usage": usage,
+                    "durationMs": int((time.time() - started) * 1000),
+                    "timeoutSec": judge_timeout_sec,
+                    "tries": tries,
+                    "error": err or None,
+                    "rawResponseHead": _truncate_str(last_text or "", 2000),
+                },
+                "prompt": {
+                    "system": sys_prompt,
+                    "user": _truncate_str(prompt, 4000),
+                    "userPromptSizeBytes": len(str(prompt).encode("utf-8")),
+                    "userPromptSizeChars": len(str(prompt)),
+                    "language": language,
+                    "languageSource": language_info.get("source") or "default",
+                    **({"languageDetectionWarning": language_warning} if isinstance(language_warning, str) and language_warning else {}),
+                },
+            },
+        )
+        result["rubricsPath"] = rubrics_out_path
+        result["rubricsSummary"] = {"total": len(rows), "passed": passed_n, "failed": failed_n}
+
+    if not overwrite and os.path.exists(dep_graph_out_path):
+        result["depGraphSkipped"] = True
+    else:
+        dep_graph = _ae._build_dependency_graph(task_dir)
+        dep_graph["evalModel"] = model_name
+        _write_json(dep_graph_out_path, dep_graph)
+        result["depGraphPath"] = dep_graph_out_path
+        result["depGraphSummary"] = {"nodes": len(dep_graph.get("nodes", [])), "edges": len(dep_graph.get("edges", []))}
+
+    return result
+
+
+def evaluate_task_dir(
+    task_dir: str,
+    *,
+    eval_yaml_path: str,
+    overwrite: bool = False,
+    max_retries: int = 6,
+    max_str_len: int = 2000,
+    max_trace_items: int = 30,
+    max_output_files: int = 10,
+) -> Dict[str, Json]:
+    """Alias for compatibility (same as agent_eval.py)."""
+    return evaluate_task(
+        task_dir,
+        eval_yaml_path=eval_yaml_path,
+        overwrite=overwrite,
+        max_retries=max_retries,
+        max_str_len=max_str_len,
+        max_trace_items=max_trace_items,
+        max_output_files=max_output_files,
+    )
+
+
+def _select_task_dirs(task_dir: str) -> List[str]:
+    """Resolve a case path or a runs root without descending into input_source."""
+    if os.path.isfile(os.path.join(task_dir, "metadata.json")):
+        return [task_dir]
+    task_dirs: List[str] = []
+    if os.path.isdir(task_dir):
+        for entry in os.listdir(task_dir):
+            entry_path = os.path.join(task_dir, entry)
+            if os.path.isdir(entry_path) and os.path.isfile(
+                os.path.join(entry_path, "metadata.json")
+            ):
+                task_dirs.append(entry_path)
+    return task_dirs or [task_dir]
+
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser(description="Evaluate task(s) using ClaudeCode agent-as-a-judge")
+    p.add_argument("--task-dir", required=True, help="Path to task execution result directory or runs root")
+    p.add_argument("--eval-yaml", required=True, help="Path to eval YAML (baseUrl/model/apiKey/model_name)")
+    p.add_argument("--overwrite", action="store_true", help="Overwrite existing evaluation results")
+    p.add_argument("--parallel", action="store_true", help="Enable parallel evaluation across tasks")
+    p.add_argument("--workers", type=int, default=5)
+    p.add_argument("--max-retries", type=int, default=6)
+    p.add_argument("--max-str-len", type=int, default=2000)
+    p.add_argument("--max-trace-items", type=int, default=30)
+    p.add_argument("--max-output-files", type=int, default=10)
+    args = p.parse_args()
+
+    # Prefer the requested directory itself when it is already one task case.
+    # Strict runs retain a manifest-only ``input_source/metadata.json`` beneath
+    # the case; enumerating children first would mistake that snapshot for the
+    # candidate case and skip evaluation because it has no output directory.
+    task_dirs = _select_task_dirs(args.task_dir)
+
+    if args.parallel and len(task_dirs) > 1:
+        max_workers = min(args.workers, len(task_dirs))
+        with tqdm(total=len(task_dirs), desc="Evaluating tasks") as pbar:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = {
+                    executor.submit(
+                        evaluate_task,
+                        task_dir=td,
+                        eval_yaml_path=args.eval_yaml,
+                        overwrite=args.overwrite,
+                        max_retries=args.max_retries,
+                        max_str_len=args.max_str_len,
+                        max_trace_items=args.max_trace_items,
+                        max_output_files=args.max_output_files,
+                    ): td
+                    for td in task_dirs
+                }
+                for fut in as_completed(futures):
+                    _ = fut.result()
+                    pbar.update(1)
+                    # print(json.dumps(_, ensure_ascii=False, indent=2))
+    else:
+        for td in tqdm(task_dirs, desc="Evaluating tasks"):
+            _ = evaluate_task(
+                task_dir=td,
+                eval_yaml_path=args.eval_yaml,
+                overwrite=args.overwrite,
+                max_retries=args.max_retries,
+                max_str_len=args.max_str_len,
+                max_trace_items=args.max_trace_items,
+                max_output_files=args.max_output_files,
+            )
+            # print(json.dumps(_, ensure_ascii=False, indent=2))
+
+"""
+uv run --project evaluation --frozen python evaluation/src/agent_as_a_judge.py \
+    --task-dir /path/to/Workspace-Bench/evaluation/output/Codex--Kimi-K2.5--Lite \
+    --eval-yaml /path/to/Workspace-Bench/evaluation/runs/judge.yaml \
+    --parallel \
+    --workers 3
+"""

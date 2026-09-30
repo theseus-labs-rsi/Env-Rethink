@@ -1,0 +1,18 @@
+{
+  "schema_version": 2,
+  "run_id": "cover-example-001",
+  "workspace_root": "/abs/path/to/workspace_snapshot",
+  "catalog_root": "/abs/path/to/artifacts/catalog",
+  "output_root": "/abs/path/to/artifacts/cover-run-001",
+  "model": "gpt-5.4",
+  "auth_mode": "chatgpt",
+  "expected_codex_version": "0.144.5",
+  "reasoning_effort": "medium",
+  "timeout_seconds": 600.0,
+  "max_parallel_buckets": 5,
+  "max_coordination_rounds": 3,
+  "bucket_min_files": 32,
+  "bucket_target_files": 48,
+  "bucket_max_files": 64,
+  "resume_existing_output": false
+}

@@ -1,0 +1,80 @@
+# TB 本地基座镜像：wb-tb-base + claude code + codex，一个容器里两个 agent 都能跑。
+#
+# 为什么是在 wb-tb-base 上加一层，而不是另起一个 python 镜像：
+#   加难管线要的东西（判分器三件套 pytest / pytest-json-ctrf / jsonschema、node、jq/patch）
+#   都在 wb-tb-base 里，题目镜像本来就是 FROM 它的。基座只要再补 agent 运行时，
+#   题目镜像就能用 `COPY --from=<基座> /opt/tb-agent` 一键带上 agent（见 image.py）。
+#
+# 构建：python3 runtime/localbase/cli.py build-base
+#       （或直接 python3 runtime/localbase/image.py 里的 build_agent_base）
+#
+# 环境变量：
+#   TB_AGENT_BASE_FROM  父镜像，默认 wb-tb-base:20260916（由 runtime/build-base.sh 构建）
+#   TB_AGENT_BASE_NAME  产物镜像名，默认 tb-agent-base
+#   TB_AGENT_BASE_TAG   产物 tag，默认 20260916（与 wb-tb-base 对齐，便于按代配对）
+#   CLAUDE_CODE_VERSION claude code npm 版本，默认 2.1.187
+#   CODEX_VERSION       codex npm 版本，默认 0.157.0
+
+ARG TB_AGENT_BASE_FROM=wb-tb-base:20260916
+FROM ${TB_AGENT_BASE_FROM}
+
+ARG CLAUDE_CODE_VERSION=2.1.187
+ARG CODEX_VERSION=0.157.0
+ARG NPM_REGISTRY=https://registry.npmjs.org/
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 两个 agent 都要的运行时：ripgrep（claude/codex 都是 rg 重度用户）、less、unzip。
+# wb-tb-base 已经有 bash/curl/git/jq/patch/procps/xz-utils + node 20.18.1。
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ripgrep \
+        less \
+        unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── agent 运行时集中放在 /opt/tb-agent ─────────────────────────────────
+# 单独一个前缀目录，是为了让题目镜像能用一行 COPY 把整套 agent 带走：
+#     COPY --from=<基座> /opt/tb-agent /opt/tb-agent
+# COPY --from 是纯文件复制，不关心目标镜像的包管理器，所以对任何题目镜像都成立；
+# 唯一的隐含约束是 node 依赖的 glibc 版本（本基座与题目镜像同源于 wb-tb-base，天然一致）。
+ENV TB_AGENT_HOME=/opt/tb-agent \
+    NPM_CONFIG_REGISTRY=${NPM_REGISTRY} \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_AUDIT=false
+
+RUN mkdir -p /opt/tb-agent/node /opt/tb-agent/codex-home /opt/tb-agent/cache
+
+# 全局装到 /opt/tb-agent/node 下（不用 /usr/local 是为了不污染题目镜像自带的 node_modules）
+RUN npm install --global --prefix /opt/tb-agent/node \
+        "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" \
+        "@openai/codex@${CODEX_VERSION}" \
+    && /opt/tb-agent/node/bin/claude --version \
+    && /opt/tb-agent/node/bin/codex --version
+
+# codex 的家目录：装完就固定在这儿，运行时用 CODEX_HOME 指过来（避免污染 ~/.codex）
+ENV CODEX_HOME=/opt/tb-agent/codex-home
+
+# ── 运行时开关 ────────────────────────────────────────────────────────
+# IS_SANDBOX=1：claude code 2.x 拒绝 root 下用 --dangerously-skip-permissions，
+#   除非它认为自己在沙箱里。TB 的题目镜像默认 root，agent 又必须全自动，
+#   所以这里直接声明"这就是沙箱"（容器本身确实是一次性沙箱）。
+# CODEX_SANDBOX_MODE：codex 的 --sandbox 档位，这里是容器内，直接用 danger-full-access。
+# 两个都允许运行时被覆盖。
+ENV IS_SANDBOX=1 \
+    CODEX_SANDBOX_MODE=danger-full-access \
+    PATH=/opt/tb-agent/node/bin:${PATH}
+
+COPY tb_agent_env.sh gwshim.py /opt/tb-agent/
+RUN chmod +x /opt/tb-agent/tb_agent_env.sh
+
+# 自检：两个 CLI 都在 PATH 上，且能非交互式起来
+RUN set -e; \
+    echo -n "  claude: "; command -v claude && claude --version; \
+    echo -n "  codex:  "; command -v codex && codex --version; \
+    echo -n "  rg:     "; command -v rg; \
+    echo -n "  网关整形代理: "; python3 /opt/tb-agent/gwshim.py --help >/dev/null && echo OK; \
+    echo -n "  CODEX_HOME: "; test -d "$CODEX_HOME" && echo "$CODEX_HOME"; \
+    echo -n "  判分器依赖: "; python3 -c "import pytest, jsonschema; print('OK')"
+
+CMD ["sleep", "infinity"]

@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# ── agentkit/ 的产物 ───────────────────────────────────────────────
+agentkit/.generated/
+
+# ── hardening/ 的产物 ──────────────────────────────────────────────
+hardening/runs/
+hardening/.cache/
+hardening/.generated/
+# 由 runtime/make-task-image.py 从每题 environment/Dockerfile 推导
+hardening/runtime/task-images/
+hardening/runtime/task-layouts/
+
+# ── envgen / workspace_eval / curate 的产物 ────────────────────────
+envgen/.venv/
+envgen/.generated/
+workspace_eval/.generated/
+workspace_eval/output/
+workspace_eval/logs/
+workspace_eval/experiments/
+curate/.generated/
+curate/experiments/
+*/runs/
+*/output/
+
+# ── curate/:只排除红队样本生成器 ───────────────────────────────────
+# 该脚本整体服务于一条内部研究线,不进开源树(本地保留)。
+curate/gen_consensus_attack_tasks.py
+
+# ── 内部实验报告:只留本地,不进仓库 ────────────────────────────────
+# 含内网 IP:端口、训练平台任务名 / model_id、推理服务实例名等,
+# 定位得到内部基础设施。工程方法部分保留在同目录其余 doc 里。
+workspace_eval/docs/noise_id_30task_delivery_report.md
+workspace_eval/docs/noise_id_downstream_benefit_design.md
+workspace_eval/docs/noise_id_experiment_inventory.md
+workspace_eval/docs/noise_id_train_to_task_engineering_notes.md
+workspace_eval/docs/noise_id_v2t_model_report.md
+
+# ── 仓库内部说明:只留本地,不进仓库 ────────────────────────────────
+AGENTS.md
+
+# 曾漏网入库(裸 AGENTS.md 规则未拦住),显式钉住:噪音生成脚本说明,含内网模型别名
+workspace_eval/scripts/noise/AGENTS.md

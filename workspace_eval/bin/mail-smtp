@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="${WORKSPACE_BENCH_ROOT:-${RIP_BENCH_ROOT:-}}"
+if [[ -z "$ROOT" ]]; then
+  ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+fi
+
+DEPS_ROOT="${WORKSPACE_BENCH_MAIL_NODE_MODULES:-/opt/workspace-bench/mail-skill/node_modules}"
+if [[ -d "$DEPS_ROOT" ]]; then
+  export NODE_PATH="$DEPS_ROOT${NODE_PATH:+:$NODE_PATH}"
+fi
+
+exec node "$ROOT/skills/email/imap-smtp-email-chinese/scripts/smtp.js" "$@"

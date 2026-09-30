@@ -1,0 +1,12 @@
+# env-rethink 的 Python 依赖
+#
+# 这些不是本目录的代码需要的，而是 **vendor/ 里那批工具**需要的：
+#   PyYAML      gate_check（读 task-layouts/*.yaml 与 plan.yaml）
+#   jsonschema  validate_events / merge_events（逐行校验 canonical v2）
+# 别用自写的 YAML 子集解析器替 PyYAML —— plan.yaml 是**生成 agent 自由写的**，
+# 不是我们生成的固定格式，子集解析器会在边缘形状上静默出错。
+#
+# matplotlib 只有 vendor/tools/heatmap.py 用（出图，人工看的），管线不调它，
+# 所以不列进来；真要出图再单独装。
+PyYAML>=6.0
+jsonschema>=4.17

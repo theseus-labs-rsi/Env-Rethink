@@ -1,0 +1,463 @@
+{
+  "$defs": {
+    "CandidateTask": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_type": {
+          "const": "candidate_task",
+          "default": "candidate_task",
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "attempt": {
+          "minimum": 1,
+          "title": "Attempt",
+          "type": "integer"
+        },
+        "author_run_id": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Author Run Id",
+          "type": "string"
+        },
+        "candidate_id": {
+          "pattern": "^cand_[a-z][a-z0-9]{15,63}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "candidate_index": {
+          "minimum": 1,
+          "title": "Candidate Index",
+          "type": "integer"
+        },
+        "events_path": {
+          "title": "Events Path",
+          "type": "string"
+        },
+        "files_used": {
+          "description": "POSIX paths relative to the Workspace root, sorted lexicographically and unique.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Files Used",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "mode": {
+          "enum": [
+            "new",
+            "repair"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "previous_candidate_id": {
+          "anyOf": [
+            {
+              "pattern": "^cand_[a-z][a-z0-9]{15,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Previous Candidate Id"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "summary": {
+          "maxLength": 1600,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "visible_workspace_manifest_hash": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Visible Workspace Manifest Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "candidate_index",
+        "attempt",
+        "mode",
+        "title",
+        "summary",
+        "files_used",
+        "events_path",
+        "visible_workspace_manifest_hash",
+        "author_run_id"
+      ],
+      "title": "CandidateTask",
+      "type": "object"
+    },
+    "MaskManifest": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted_candidate_index": {
+          "minimum": 1,
+          "title": "Accepted Candidate Index",
+          "type": "integer"
+        },
+        "artifact_type": {
+          "const": "mask_manifest",
+          "default": "mask_manifest",
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "content_hash": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Content Hash",
+          "type": "string"
+        },
+        "mask_rate": {
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Mask Rate",
+          "type": "number"
+        },
+        "masked_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Masked Paths",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "newly_masked_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Newly Masked Paths",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "population_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Population Paths",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "random_seed": {
+          "title": "Random Seed",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "accepted_candidate_index",
+        "random_seed",
+        "mask_rate",
+        "population_paths",
+        "newly_masked_paths",
+        "masked_paths",
+        "content_hash"
+      ],
+      "title": "MaskManifest",
+      "type": "object"
+    },
+    "ReviewIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "enum": [
+            "schema",
+            "file_consistency",
+            "excerpt_fidelity",
+            "action_semantics",
+            "timeline",
+            "task_coherence"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "event_ids": {
+          "items": {
+            "pattern": "^evt_[a-z][a-z0-9]{15,63}$",
+            "type": "string"
+          },
+          "title": "Event Ids",
+          "type": "array"
+        },
+        "message": {
+          "maxLength": 1600,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "paths": {
+          "description": "Affected Workspace-relative POSIX paths, sorted lexicographically and unique.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Paths",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "suggestion": {
+          "maxLength": 1600,
+          "minLength": 1,
+          "title": "Suggestion",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "message",
+        "suggestion"
+      ],
+      "title": "ReviewIssue",
+      "type": "object"
+    },
+    "ReviewResult": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_type": {
+          "const": "review_result",
+          "default": "review_result",
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "attempt": {
+          "minimum": 1,
+          "title": "Attempt",
+          "type": "integer"
+        },
+        "candidate_id": {
+          "pattern": "^cand_[a-z][a-z0-9]{15,63}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/SemanticCheck"
+          },
+          "maxItems": 6,
+          "minItems": 6,
+          "title": "Checks",
+          "type": "array"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/ReviewIssue"
+          },
+          "title": "Issues",
+          "type": "array"
+        },
+        "reviewer_run_id": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Reviewer Run Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "verdict": {
+          "enum": [
+            "PASS",
+            "REVISE"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "attempt",
+        "verdict",
+        "checks",
+        "reviewer_run_id"
+      ],
+      "title": "ReviewResult",
+      "type": "object"
+    },
+    "SemanticCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "schema_conformance",
+            "file_consistency",
+            "excerpt_fidelity",
+            "action_semantics",
+            "timeline_plausibility",
+            "task_coherence"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "rationale": {
+          "maxLength": 1600,
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "passed",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "status",
+        "rationale"
+      ],
+      "title": "SemanticCheck",
+      "type": "object"
+    },
+    "TimelineEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "adjusted_occurred_at": {
+          "format": "date-time",
+          "title": "Adjusted Occurred At",
+          "type": "string"
+        },
+        "canonical_sequence": {
+          "minimum": 1,
+          "title": "Canonical Sequence",
+          "type": "integer"
+        },
+        "input_event_id": {
+          "pattern": "^evt_[a-z][a-z0-9]{15,63}$",
+          "title": "Input Event Id",
+          "type": "string"
+        },
+        "original_occurred_at": {
+          "format": "date-time",
+          "title": "Original Occurred At",
+          "type": "string"
+        },
+        "output_event_id": {
+          "pattern": "^evt_[a-z][a-z0-9]{15,63}$",
+          "title": "Output Event Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "input_event_id",
+        "output_event_id",
+        "canonical_sequence",
+        "original_occurred_at",
+        "adjusted_occurred_at"
+      ],
+      "title": "TimelineEntry",
+      "type": "object"
+    },
+    "TimelineResult": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted_candidate_ids": {
+          "items": {
+            "pattern": "^cand_[a-z][a-z0-9]{15,63}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Accepted Candidate Ids",
+          "type": "array"
+        },
+        "artifact_type": {
+          "const": "timeline_result",
+          "default": "timeline_result",
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "blocking_issues": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Blocking Issues",
+          "type": "array"
+        },
+        "editor_run_id": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Editor Run Id",
+          "type": "string"
+        },
+        "entries": {
+          "items": {
+            "$ref": "#/$defs/TimelineEntry"
+          },
+          "title": "Entries",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "TIMELINE_COMPLETE",
+            "TIMELINE_BLOCKED"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "accepted_candidate_ids",
+        "editor_run_id"
+      ],
+      "title": "TimelineResult",
+      "type": "object"
+    }
+  },
+  "$id": "https://workspace-bench.local/schema/context-event-log-workflow-v1.json",
+  "description": "Private Codex A/B/C orchestration artifacts. These records are not part of the agent-visible event log.",
+  "discriminator": {
+    "mapping": {
+      "candidate_task": "#/$defs/CandidateTask",
+      "mask_manifest": "#/$defs/MaskManifest",
+      "review_result": "#/$defs/ReviewResult",
+      "timeline_result": "#/$defs/TimelineResult"
+    },
+    "propertyName": "artifact_type"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/CandidateTask"
+    },
+    {
+      "$ref": "#/$defs/ReviewResult"
+    },
+    {
+      "$ref": "#/$defs/MaskManifest"
+    },
+    {
+      "$ref": "#/$defs/TimelineResult"
+    }
+  ],
+  "title": "Workspace-Bench Context Event Log Workflow Artifacts v1"
+}

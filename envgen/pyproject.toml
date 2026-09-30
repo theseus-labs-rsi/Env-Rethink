@@ -1,0 +1,21 @@
+[project]
+name = "envgen-kit"
+version = "0.1.0"
+description = "Standalone Event Log / Collection Map generation for any workspace benchmark"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "jsonschema==4.26.0",
+  "pydantic==2.12.5",
+  "pyyaml==6.0.3",
+  "tiktoken==0.12.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/workspace_env"]
+
+[dependency-groups]
+dev = []
