@@ -1,0 +1,40 @@
+[project]
+name = "workspace-bench-evaluation"
+version = "0.0.0"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "pyyaml>=6.0",
+    "tqdm>=4.66",
+    # workspace_env（环境构造 + MCP sidecar）：pydantic/tiktoken 之前只是传递依赖，
+    # 这里显式声明；mcp 固定版本 —— server.py 读的是 SDK 私有属性
+    # （FastMCP._tool_manager），换版本会静默改工具 schema。
+    "pydantic>=2.10,<3",
+    "tiktoken>=0.9,<1",
+    "jsonschema>=4.20,<5",
+    "mcp==1.27.0",
+    "uvicorn>=0.30,<1",
+]
+
+[dependency-groups]
+download = [
+    "huggingface-hub>=0.34",
+]
+parsing = [
+    "pdfminer.six>=20250506",
+    "pymupdf>=1.24,<2",
+    "pypdf>=5.0",
+    "openpyxl>=3.1,<4",
+    "python-docx>=1.1,<2",
+    "python-pptx>=1.0",
+    "textract>=2,<3",
+    "xlrd>=1.2,<2",
+]
+test = [
+    "pytest>=8.3,<10",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

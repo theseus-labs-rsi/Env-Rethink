@@ -1,13 +1,10 @@
 # Self-contained build for the Workspace-Bench evaluation runtime.
 #
 # This is a trimmed port of the upstream Workspace-Bench
-# `evaluation/docker/Dockerfile`. The upstream image is assembled from manifests
-# and Office/mail skill assets that live in the upstream monorepo but are NOT part
-# of this repository: there is no `pyproject.toml` / `uv.lock` here, and no
-# `skills/` tree. Rather than depend on a pre-built `workspace-bench:local` image
-# produced elsewhere, this Dockerfile installs an explicit, version-bounded Python
-# dependency set and the shared Node Office runtime, so the image builds from this
-# checkout alone:
+# `evaluation/docker/Dockerfile`, adapted to this checkout's layout and to the
+# harness set this repository supports. The image builds entirely from files in
+# this repository, so it does not depend on a pre-built `workspace-bench:local`
+# image:
 #
 #     docker compose -f workspace_eval/docker/docker-compose.yaml build
 #     # or: docker build -t workspace-bench:local workspace_eval
@@ -16,7 +13,7 @@
 # COPY source below is relative to that directory. Container-internal paths keep
 # the upstream `evaluation/` naming so the runtime mounts and env vars still line
 # up. Removed relative to upstream: the deepagents/openclaw/dsh harness runtimes
-# and the Office/mail skill trees.
+# and the Office/mail skill trees that this checkout does not ship.
 
 FROM node:24-bookworm-slim
 
@@ -74,32 +71,23 @@ RUN uv python install 3.11 \
 
 ENV UV_PYTHON_DOWNLOADS=never
 
-# Evaluation runtime dependencies. Upstream installs these from a locked
-# `evaluation/pyproject.toml` (`uv sync --frozen --group download --group parsing`);
-# that manifest is not part of this checkout, so the same dependency set is listed
-# here explicitly with the same version bounds. The `deepagent` group is dropped
-# along with the deepagents harness.
-RUN uv venv --python 3.11 "$UV_PROJECT_ENVIRONMENT" \
-    && uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" \
-      "pyyaml>=6.0" \
-      "tqdm>=4.66" \
-      "pydantic>=2.10,<3" \
-      "tiktoken>=0.9,<1" \
-      "jsonschema>=4.20,<5" \
-      "mcp==1.27.0" \
-      "uvicorn>=0.30,<1" \
-      "huggingface-hub>=0.34" \
-      "pdfminer.six>=20250506" \
-      "pymupdf>=1.24,<2" \
-      "pypdf>=5.0" \
-      "openpyxl>=3.1,<4" \
-      "python-docx>=1.1,<2" \
-      "python-pptx>=1.0" \
-      "xlrd>=1.2,<2" \
-      "textract>=2,<3"
+# Evaluation runtime dependencies, installed through the same `uv` project as
+# upstream (`uv sync --frozen`) so the launcher scripts that run
+# `uv run --project <eval> --frozen --no-sync python ...` keep working. The
+# checked-in `pyproject.toml`/`uv.lock` are the upstream manifests with the
+# deepagents group/source removed (this checkout does not ship `deepagents/libs`).
+COPY pyproject.toml uv.lock .python-version /opt/workspace-bench/evaluation/
 
-# Office/PDF helpers that upstream installs on top of the locked manifest.
-RUN uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" \
+RUN uv sync \
+      --project /opt/workspace-bench/evaluation \
+      --frozen \
+      --group download \
+      --group parsing
+
+# Shell-based agents use the evaluation virtual-environment Python wrapper
+# below. Install Office helpers in that same environment so a rebuilt image
+# retains the full document/PDF/PPTX/XLSX capability of workspace-bench:local.
+RUN uv pip install --project /opt/workspace-bench/evaluation \
     defusedxml \
     lxml \
     'markitdown[pptx]' \
@@ -146,6 +134,12 @@ RUN mkdir -p "$TIKTOKEN_CACHE_DIR" \
 # Shared Node runtime for Office/PDF artifact tasks.
 COPY docker/office-runtime.package.json /opt/workspace-bench/office-runtime/package.json
 RUN npm install --prefix "$WORKSPACE_BENCH_OFFICE_RUNTIME" --omit=dev
+
+# Node dependencies for the agent/judge driver scripts. `baselines/ClaudeCode.js`
+# imports the Claude Agent SDK from `<eval>/node_modules`, so install the
+# evaluation package.json deps into the image's evaluation directory.
+COPY package.json package-lock.json /workspace/Workspace-Bench/evaluation/
+RUN npm ci --prefix /workspace/Workspace-Bench/evaluation --omit=dev
 
 # Per-run agent home templates. Upstream seeds these from the Office skill tree;
 # this checkout does not ship that tree, so the directories start empty and the
