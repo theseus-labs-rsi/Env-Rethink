@@ -1,8 +1,8 @@
 services:
   workspace-bench:
     build:
-      context: ../..
-      dockerfile: evaluation/docker/Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
       network: host
     image: workspace-bench:local
     network_mode: host
@@ -24,7 +24,9 @@ services:
       UV_PYTHON_INSTALL_DIR: /opt/uv/python
       UV_PROJECT_ENVIRONMENT: /opt/workspace-bench/evaluation-venv
     volumes:
-      - ../..:/workspace/Workspace-Bench
+      # The image keeps the upstream `evaluation/` layout internally; this
+      # checkout's directory is `workspace_eval/`, so bind it to that path.
+      - ..:/workspace/Workspace-Bench/evaluation
       - uv-cache:/root/.cache/uv
       - npm-cache:/root/.npm
 
@@ -35,8 +37,8 @@ services:
   # beneath evaluation/output is writable.
   workspace-bench-task:
     build:
-      context: ../..
-      dockerfile: evaluation/docker/Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
       network: host
     image: workspace-bench:local
     working_dir: /tmp

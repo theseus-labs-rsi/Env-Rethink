@@ -150,7 +150,13 @@ python workspace_eval/scripts/run_experiment.py \
   --init workspace_eval/experiments/example.yaml
 ```
 
-Edit the generated YAML before using it: replace inherited `evaluation/` paths with paths appropriate to this checkout, point to your tasks and workspace assets, and configure the agent and judge. The local runner requires the image name `workspace-bench:local`; tag your compatible image accordingly and update `runtime.expected_image_id` to its actual image ID.
+Edit the generated YAML before using it: replace inherited `evaluation/` paths with paths appropriate to this checkout, point to your tasks and workspace assets, and configure the agent and judge. The local runner requires an image named `workspace-bench:local`; build it from the bundled, self-contained Dockerfile:
+
+```bash
+docker compose -f workspace_eval/docker/docker-compose.yaml build
+```
+
+Then set `runtime.expected_image_id` to the resulting image ID (`docker image inspect workspace-bench:local --format='{{.Id}}'`). The build needs no assets from outside this checkout.
 
 ```bash
 # Validate the configuration and task structure without starting containers.
@@ -158,7 +164,7 @@ python workspace_eval/scripts/run_experiment.py \
   --config workspace_eval/experiments/example.yaml --validate-only
 ```
 
-Execution also requires restoring the missing upstream runtime assets, including repository-root `deepagents/libs` and the workspace evaluation Python dependency manifests. These files are needed for runtime staging as well as image preparation. Once the runtime assets, image, data, and configuration are ready:
+Execution also needs the task data and workspace snapshots, which are not shipped in this repository, to be in place. Once the image, data, and configuration are ready:
 
 ```bash
 # Execute tasks and judge their deliverables.

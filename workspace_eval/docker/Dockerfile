@@ -1,3 +1,23 @@
+# Self-contained build for the Workspace-Bench evaluation runtime.
+#
+# This is a trimmed port of the upstream Workspace-Bench
+# `evaluation/docker/Dockerfile`. The upstream image is assembled from manifests
+# and Office/mail skill assets that live in the upstream monorepo but are NOT part
+# of this repository: there is no `pyproject.toml` / `uv.lock` here, and no
+# `skills/` tree. Rather than depend on a pre-built `workspace-bench:local` image
+# produced elsewhere, this Dockerfile installs an explicit, version-bounded Python
+# dependency set and the shared Node Office runtime, so the image builds from this
+# checkout alone:
+#
+#     docker compose -f workspace_eval/docker/docker-compose.yaml build
+#     # or: docker build -t workspace-bench:local workspace_eval
+#
+# The build context is `workspace_eval/` (as set in the compose file), so every
+# COPY source below is relative to that directory. Container-internal paths keep
+# the upstream `evaluation/` naming so the runtime mounts and env vars still line
+# up. Removed relative to upstream: the deepagents/openclaw/dsh harness runtimes
+# and the Office/mail skill trees.
+
 FROM node:24-bookworm-slim
 
 COPY --from=ghcr.io/astral-sh/uv:0.12.1 /uv /uvx /bin/
@@ -9,7 +29,6 @@ ENV RIP_BENCH_ROOT=/workspace/Workspace-Bench
 ENV RIP_BENCH_EVAL_ROOT=/workspace/Workspace-Bench/evaluation
 ENV CODEX_SANDBOX_MODE=danger-full-access
 ENV WORKSPACE_BENCH_OFFICE_RUNTIME=/opt/workspace-bench/office-runtime
-ENV WORKSPACE_BENCH_OFFICE_SKILLS=/opt/workspace-bench/office-skills
 ENV CODEX_HOME=/opt/workspace-bench/agent-homes/codex/.codex
 ENV WORKSPACE_BENCH_CODEX_HOME_TEMPLATE=/opt/workspace-bench/agent-homes/codex/.codex
 ENV WORKSPACE_BENCH_CLAUDE_CONFIG_DIR=/opt/workspace-bench/agent-homes/claude/.claude
@@ -18,8 +37,7 @@ ENV UV_PYTHON_INSTALL_DIR=/opt/uv/python
 ENV UV_PROJECT_ENVIRONMENT=/opt/workspace-bench/evaluation-venv
 ENV UV_LINK_MODE=copy
 ENV PATH=/opt/workspace-bench/evaluation-venv/bin:/root/.local/bin:$PATH
-ENV WORKSPACE_BENCH_MAIL_NODE_MODULES=/opt/workspace-bench/mail-skill/node_modules
-ENV NODE_PATH=/opt/workspace-bench/office-runtime/node_modules:/opt/workspace-bench/mail-skill/node_modules
+ENV NODE_PATH=/opt/workspace-bench/office-runtime/node_modules
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     antiword \
@@ -56,18 +74,32 @@ RUN uv python install 3.11 \
 
 ENV UV_PYTHON_DOWNLOADS=never
 
-COPY evaluation/pyproject.toml evaluation/uv.lock evaluation/.python-version /opt/workspace-bench/evaluation/
+# Evaluation runtime dependencies. Upstream installs these from a locked
+# `evaluation/pyproject.toml` (`uv sync --frozen --group download --group parsing`);
+# that manifest is not part of this checkout, so the same dependency set is listed
+# here explicitly with the same version bounds. The `deepagent` group is dropped
+# along with the deepagents harness.
+RUN uv venv --python 3.11 "$UV_PROJECT_ENVIRONMENT" \
+    && uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" \
+      "pyyaml>=6.0" \
+      "tqdm>=4.66" \
+      "pydantic>=2.10,<3" \
+      "tiktoken>=0.9,<1" \
+      "jsonschema>=4.20,<5" \
+      "mcp==1.27.0" \
+      "uvicorn>=0.30,<1" \
+      "huggingface-hub>=0.34" \
+      "pdfminer.six>=20250506" \
+      "pymupdf>=1.24,<2" \
+      "pypdf>=5.0" \
+      "openpyxl>=3.1,<4" \
+      "python-docx>=1.1,<2" \
+      "python-pptx>=1.0" \
+      "xlrd>=1.2,<2" \
+      "textract>=2,<3"
 
-RUN uv sync \
-      --project /opt/workspace-bench/evaluation \
-      --frozen \
-      --group download \
-      --group parsing
-
-# Shell-based agents use the evaluation virtual-environment Python wrapper
-# below. Install Office helpers in that same environment so a rebuilt image
-# retains the full document/PDF/PPTX/XLSX capability of workspace-bench:local.
-RUN uv pip install --project /opt/workspace-bench/evaluation \
+# Office/PDF helpers that upstream installs on top of the locked manifest.
+RUN uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" \
     defusedxml \
     lxml \
     'markitdown[pptx]' \
@@ -111,22 +143,14 @@ RUN mkdir -p "$TIKTOKEN_CACHE_DIR" \
     && python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')" \
     && chmod -R a+rX "$TIKTOKEN_CACHE_DIR"
 
-COPY evaluation/docker/office-runtime.package.json /opt/workspace-bench/office-runtime/package.json
+# Shared Node runtime for Office/PDF artifact tasks.
+COPY docker/office-runtime.package.json /opt/workspace-bench/office-runtime/package.json
 RUN npm install --prefix "$WORKSPACE_BENCH_OFFICE_RUNTIME" --omit=dev
 
-# The task service changes HOME to a disposable task-local directory. Preload
-# Office skills under immutable image-level homes, then let each harness
-# materialize or reference those skill sources for the individual task.
-COPY evaluation/skills/office/ /opt/workspace-bench/office-skills/
-RUN mkdir -p \
-      "$CODEX_HOME/skills" \
-      "$WORKSPACE_BENCH_CLAUDE_CONFIG_DIR/skills" \
-    && for skill in docx pdfs slides spreadsheets; do \
-         cp -a "$WORKSPACE_BENCH_OFFICE_SKILLS/$skill" "$CODEX_HOME/skills/"; \
-       done \
-    && for skill in docx pdf pptx xlsx; do \
-         cp -a "$WORKSPACE_BENCH_OFFICE_SKILLS/$skill" "$WORKSPACE_BENCH_CLAUDE_CONFIG_DIR/skills/"; \
-       done
+# Per-run agent home templates. Upstream seeds these from the Office skill tree;
+# this checkout does not ship that tree, so the directories start empty and the
+# harnesses copy them into a writable per-run home.
+RUN mkdir -p "$CODEX_HOME" "$WORKSPACE_BENCH_CLAUDE_CONFIG_DIR"
 
 RUN command -v soffice \
     && command -v pandoc \
@@ -153,18 +177,9 @@ for module in (
     importlib.import_module(module)
 PY
 RUN node -e 'for (const name of ["docx", "pdf-lib", "pptxgenjs", "react", "react-dom", "react-icons", "sharp"]) require(name)'
-RUN for skill in docx pdfs slides spreadsheets; do \
-      test -f "$CODEX_HOME/skills/$skill/SKILL.md"; \
-    done \
-    && for skill in docx pdf pptx xlsx; do \
-      test -f "$WORKSPACE_BENCH_CLAUDE_CONFIG_DIR/skills/$skill/SKILL.md"; \
-    done
 
-COPY skills/email/imap-smtp-email-chinese/package.json /opt/workspace-bench/mail-skill/package.json
-RUN npm install --prefix /opt/workspace-bench/mail-skill --omit=dev --ignore-scripts
-
-COPY evaluation/bin/wecom-cli evaluation/bin/wecom-mock \
-     evaluation/bin/mail-mock evaluation/bin/mail-imap evaluation/bin/mail-smtp \
+COPY bin/wecom-cli bin/wecom-mock \
+     bin/mail-mock bin/mail-imap bin/mail-smtp \
      /usr/local/bin/
 RUN chmod 0755 /usr/local/bin/wecom-cli /usr/local/bin/wecom-mock \
     /usr/local/bin/mail-mock /usr/local/bin/mail-imap /usr/local/bin/mail-smtp
