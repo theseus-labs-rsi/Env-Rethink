@@ -17,21 +17,16 @@ services:
       WORKSPACE_BENCH_EVAL_ROOT: /workspace/Workspace-Bench/evaluation
       RIP_BENCH_ROOT: /workspace/Workspace-Bench
       RIP_BENCH_EVAL_ROOT: /workspace/Workspace-Bench/evaluation
-      DEEPAGENTS_ROOT: /workspace/Workspace-Bench/deepagents
       CODEX_SANDBOX_MODE: danger-full-access
       CODEX_HOME: /opt/workspace-bench/agent-homes/codex/.codex
       WORKSPACE_BENCH_CODEX_HOME_TEMPLATE: /opt/workspace-bench/agent-homes/codex/.codex
       WORKSPACE_BENCH_CLAUDE_CONFIG_DIR: /opt/workspace-bench/agent-homes/claude/.claude
-      WORKSPACE_BENCH_OPENCLAW_SKILLS_DIR: /opt/workspace-bench/agent-homes/openclaw/.openclaw/skills
-      WORKSPACE_BENCH_DEEPAGENTS_SKILLS_DIR: /opt/workspace-bench/agent-homes/deepagents/.deepagents/skills
-      WORKSPACE_BENCH_DSH_SKILLS_DIR: /opt/workspace-bench/agent-homes/dsh/.dsh/skills
       UV_PYTHON_INSTALL_DIR: /opt/uv/python
       UV_PROJECT_ENVIRONMENT: /opt/workspace-bench/evaluation-venv
     volumes:
       - ../..:/workspace/Workspace-Bench
       - uv-cache:/root/.cache/uv
       - npm-cache:/root/.npm
-      - openclaw-home:/root/.openclaw
 
   # This service is deliberately separate from the development runner above.
   # run_isolated_benchmark.py creates one instance per task with `--rm`, so no
@@ -66,14 +61,10 @@ services:
       WORKSPACE_BENCH_EVAL_ROOT: /workspace/Workspace-Bench/evaluation
       RIP_BENCH_ROOT: /workspace/Workspace-Bench
       RIP_BENCH_EVAL_ROOT: /workspace/Workspace-Bench/evaluation
-      DEEPAGENTS_ROOT: /workspace/Workspace-Bench/deepagents
       CODEX_SANDBOX_MODE: workspace-write
       CODEX_HOME: /opt/workspace-bench/agent-homes/codex/.codex
       WORKSPACE_BENCH_CODEX_HOME_TEMPLATE: /opt/workspace-bench/agent-homes/codex/.codex
       WORKSPACE_BENCH_CLAUDE_CONFIG_DIR: /opt/workspace-bench/agent-homes/claude/.claude
-      WORKSPACE_BENCH_OPENCLAW_SKILLS_DIR: /opt/workspace-bench/agent-homes/openclaw/.openclaw/skills
-      WORKSPACE_BENCH_DEEPAGENTS_SKILLS_DIR: /opt/workspace-bench/agent-homes/deepagents/.deepagents/skills
-      WORKSPACE_BENCH_DSH_SKILLS_DIR: /opt/workspace-bench/agent-homes/dsh/.dsh/skills
       WORKSPACE_BENCH_TASK_STORAGE_QUOTA_MODE: ${WORKSPACE_BENCH_TASK_STORAGE_QUOTA_MODE:-docker-layer}
       HOME: /tmp/home
       XDG_CACHE_HOME: /tmp/cache
@@ -91,4 +82,3 @@ services:
 volumes:
   uv-cache:
   npm-cache:
-  openclaw-home:

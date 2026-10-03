@@ -22,7 +22,7 @@ scripts/run_experiment.py --config <yaml>
   │       └─ 每 case 两阶段：
   │           ① agent   scripts/run_strict_task_config.py → docker run（严格 allowlist 容器）
   │                     └─ src/task_container_entry.py → src/agent_runner.py
-  │                          └─ src/agents/{claudecode,codex,deepagent,deepseekharness,openclaw}.py
+  │                          └─ src/agents/{claudecode,codex,agentkit}.py
   │           ② judge   src/agent_as_a_judge.py（rubric 判分，产出 rubrics_judge--<model>.json）
   │
   └─ 远程沙盒
@@ -92,7 +92,7 @@ export TB_BASE_URL=... TB_API_KEY=... TB_MODEL=...    # 模型连接（api_provi
 | `scripts/run_strict_task_config.py` | 起严格 allowlist 容器 |
 | `src/agent_runner.py` | agent 执行核心（准备 workspace → 跑 agent → 收产物） |
 | `src/task_container_entry.py` | 容器内 entrypoint |
-| `src/agents/` | harness 适配器（`claudecode` / `codex` / `deepagent` / `deepseekharness` / `openclaw` / `agentkit`） |
+| `src/agents/` | harness 适配器（`claudecode` / `codex` / `agentkit`） |
 | `src/agent_as_a_judge.py` `src/agent_eval.py` | rubric 判分 |
 | `src/workspace_services/` | workspace 服务 sidecar（WeCom / mail 等） |
 | `docker/` | harness 容器（Office 镜像） |
@@ -121,7 +121,7 @@ export TB_BASE_URL=... TB_API_KEY=... TB_MODEL=...    # 模型连接（api_provi
 ## 三个要保留的机制
 
 1. **harness 由模型决定**：`远程 agent 配置/agent_select.py` 有一张"模型家族 → agent"的映射
-   （deepseek→dsh、gpt→codex、其它→claude_code），判据只看模型标识。
+   （gpt→codex、其它→claude_code），判据只看模型标识。
    搬进来后这应当是**唯一**的选型入口，别让 YAML 里的 `harness:` 和它打架。
 2. **condition 是正式概念**：`clean | noise | curated | task_files`。
    `condition=curated` 有硬守卫 —— 每个 task 目录必须带 `curation.json`（模块 ④ 的产物），

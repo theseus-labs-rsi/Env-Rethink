@@ -100,13 +100,8 @@ def _selection_suffix(*, task_ids: list[str], persona: str | None) -> tuple[str,
 def _normalize_harness(value: str) -> str:
     mapping = {
         "codex": "Codex",
-        "openclaw": "OpenClaw",
-        "deepagent": "DeepAgent",
         "claudecode": "ClaudeCode",
         "claude-code": "ClaudeCode",
-        "deepseekharness": "DeepSeekHarness",
-        "deepseek-harness": "DeepSeekHarness",
-        "dsh": "DeepSeekHarness",
     }
     key = value.strip().lower()
     if key not in mapping:
@@ -153,14 +148,6 @@ def _provider_config(
             1.0, float(api_retry_total_timeout_sec)
         ),
     }
-    if harness == "DeepSeekHarness":
-        return {
-            "provider_type": "deepseek",
-            "baseUrl": "${DEEPSEEK_BASE_URL}",
-            "model": llm_model,
-            "apiKey": "${DEEPSEEK_API_KEY}",
-            **retry_config,
-        }
     if auth_type == "anthropic_app_credentials":
         if harness != "ClaudeCode":
             raise SystemExit(
@@ -508,16 +495,6 @@ def build_config(args: argparse.Namespace) -> Path:
             ),
         ),
     }
-    if harness == "DeepSeekHarness":
-        max_tokens = getattr(args, "dsh_max_tokens", None)
-        if max_tokens is not None and int(max_tokens) <= 0:
-            raise SystemExit("--dsh-max-tokens must be positive")
-        config["deepseek_harness_runtime"] = {
-            "expected_sdk_version": "0.1.0rc7",
-            "provider": "deepseek-official",
-            "profile": "jsonrpc-agent-office-skills-12c3f46",
-            "max_tokens": int(max_tokens) if max_tokens is not None else None,
-        }
     if task_limit is not None:
         config["task_limit"] = int(task_limit)
     elif task_ids:
@@ -535,7 +512,7 @@ def main() -> None:
     parser.add_argument(
         "--harness",
         required=True,
-        help="Codex, OpenClaw, DeepAgent, ClaudeCode, or DeepSeekHarness (dsh)",
+        help="Codex or ClaudeCode",
     )
     parser.add_argument("--model", required=True, help="Model alias or custom model id")
     parser.add_argument(
@@ -624,11 +601,6 @@ def main() -> None:
     parser.add_argument(
         "--run-name",
         help="Output run name; defaults to Smoke/Lite/Full/Tasks-New",
-    )
-    parser.add_argument(
-        "--dsh-max-tokens",
-        type=int,
-        help="Optional positive output-token cap for DeepSeek Harness root and in-process descendants",
     )
     selection = parser.add_mutually_exclusive_group()
     selection.add_argument("--task-limit", type=int, help="Run the first N tasks in deterministic order")

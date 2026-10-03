@@ -238,9 +238,8 @@ MODEL_PRESETS: dict[str, dict[str, Json]] = {
         "wire_api": "responses",
         "parallel_tool_calls": False,
     },
-    # DeepSeek V4 models ride the 网关standard gateway through the
-    # DeepSeek Harness (dsh); the SDK consumes DEEPSEEK_BASE_URL and
-    # DEEPSEEK_API_KEY directly (Bearer ${APP_ID}:${APP_KEY}).
+    # DeepSeek V4 models ride the 网关standard gateway; the provider consumes
+    # DEEPSEEK_BASE_URL and DEEPSEEK_API_KEY directly (Bearer ${APP_ID}:${APP_KEY}).
     "deepseek-v4-flash": {
         "display_name": "DeepSeek-V4-Flash",
         "model_id": "${DEEPSEEKV4FLASH_MODEL:-deepseek/deepseek-v4-flash}",
@@ -871,9 +870,6 @@ def _copy_runtime_code(runtime_root: Path) -> Path:
         source = EVAL_ROOT / name
         if source.is_file():
             shutil.copy2(source, runtime_eval / name)
-    runtime_deepagents = runtime_root / "deepagents"
-    runtime_deepagents.mkdir()
-    _copy_tree(REPO_ROOT / "deepagents" / "libs", runtime_deepagents / "libs")
     email_skill = REPO_ROOT / "skills" / "email"
     if email_skill.is_dir():
         (runtime_root / "skills").mkdir()

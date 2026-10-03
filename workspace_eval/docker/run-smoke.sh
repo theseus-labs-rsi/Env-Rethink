@@ -6,15 +6,11 @@ EVAL_ROOT="${WORKSPACE_BENCH_EVAL_ROOT:-${RIP_BENCH_EVAL_ROOT:-$ROOT/evaluation}
 
 HARNESSES=(
   "codex"
-  "openclaw"
-  "deepagent"
   "claudecode"
 )
 
 REPORTS=(
   "output/Codex--Kimi-K2.5--Smoke/agent_runner_report.json"
-  "output/OpenClaw--Kimi-K2.5--Smoke/agent_runner_report.json"
-  "output/DeepAgent--Kimi-K2.5--Smoke/agent_runner_report.json"
   "output/ClaudeCode--Kimi-K2.5--Smoke/agent_runner_report.json"
 )
 

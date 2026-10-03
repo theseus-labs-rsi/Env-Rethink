@@ -13,9 +13,6 @@ ENV WORKSPACE_BENCH_OFFICE_SKILLS=/opt/workspace-bench/office-skills
 ENV CODEX_HOME=/opt/workspace-bench/agent-homes/codex/.codex
 ENV WORKSPACE_BENCH_CODEX_HOME_TEMPLATE=/opt/workspace-bench/agent-homes/codex/.codex
 ENV WORKSPACE_BENCH_CLAUDE_CONFIG_DIR=/opt/workspace-bench/agent-homes/claude/.claude
-ENV WORKSPACE_BENCH_OPENCLAW_SKILLS_DIR=/opt/workspace-bench/agent-homes/openclaw/.openclaw/skills
-ENV WORKSPACE_BENCH_DEEPAGENTS_SKILLS_DIR=/opt/workspace-bench/agent-homes/deepagents/.deepagents/skills
-ENV WORKSPACE_BENCH_DSH_SKILLS_DIR=/opt/workspace-bench/agent-homes/dsh/.dsh/skills
 ENV UV_MANAGED_PYTHON=1
 ENV UV_PYTHON_INSTALL_DIR=/opt/uv/python
 ENV UV_PROJECT_ENVIRONMENT=/opt/workspace-bench/evaluation-venv
@@ -60,14 +57,12 @@ RUN uv python install 3.11 \
 ENV UV_PYTHON_DOWNLOADS=never
 
 COPY evaluation/pyproject.toml evaluation/uv.lock evaluation/.python-version /opt/workspace-bench/evaluation/
-COPY deepagents/libs/deepagents /opt/workspace-bench/deepagents/libs/deepagents
 
 RUN uv sync \
       --project /opt/workspace-bench/evaluation \
       --frozen \
       --group download \
-      --group parsing \
-      --group deepagent
+      --group parsing
 
 # Shell-based agents use the evaluation virtual-environment Python wrapper
 # below. Install Office helpers in that same environment so a rebuilt image
@@ -88,9 +83,6 @@ RUN uv pip install --project /opt/workspace-bench/evaluation \
     pytesseract \
     reportlab
 
-RUN uv pip install --project /opt/workspace-bench/evaluation deepseek-harness-sdk==0.1.0rc7
-RUN test "$(uv run --project /opt/workspace-bench/evaluation python3 -c 'from importlib.metadata import version; print(version("deepseek-harness-sdk"))')" = "0.1.0rc7"
-
 # Codex runs shell commands through `bash -lc`, whose login initialization can
 # discard the PATH set above. Use wrappers rather than symlinks: CPython
 # resolves an external symlink to its base interpreter and then loses the
@@ -108,7 +100,7 @@ RUN rm -f /usr/local/bin/python /usr/local/bin/python3 \
     && command -v pdftotext \
     && command -v pdfinfo
 
-RUN npm install -g openclaw @openai/codex@0.130.0
+RUN npm install -g @openai/codex@0.130.0
 
 # `workspace_env` (MCP sidecar + generation chains) counts tokens with tiktoken,
 # which downloads its BPE file on first use.  A task container has no egress, so
@@ -129,19 +121,11 @@ COPY evaluation/skills/office/ /opt/workspace-bench/office-skills/
 RUN mkdir -p \
       "$CODEX_HOME/skills" \
       "$WORKSPACE_BENCH_CLAUDE_CONFIG_DIR/skills" \
-      "$WORKSPACE_BENCH_OPENCLAW_SKILLS_DIR" \
-      "$WORKSPACE_BENCH_DEEPAGENTS_SKILLS_DIR" \
-      "$WORKSPACE_BENCH_DSH_SKILLS_DIR" \
     && for skill in docx pdfs slides spreadsheets; do \
          cp -a "$WORKSPACE_BENCH_OFFICE_SKILLS/$skill" "$CODEX_HOME/skills/"; \
        done \
     && for skill in docx pdf pptx xlsx; do \
          cp -a "$WORKSPACE_BENCH_OFFICE_SKILLS/$skill" "$WORKSPACE_BENCH_CLAUDE_CONFIG_DIR/skills/"; \
-       done \
-    && cp -a "$WORKSPACE_BENCH_OFFICE_SKILLS/." "$WORKSPACE_BENCH_OPENCLAW_SKILLS_DIR/" \
-    && cp -a "$WORKSPACE_BENCH_OFFICE_SKILLS/." "$WORKSPACE_BENCH_DEEPAGENTS_SKILLS_DIR/" \
-    && for skill in docx pdf pptx xlsx; do \
-         cp -a "$WORKSPACE_BENCH_OFFICE_SKILLS/$skill" "$WORKSPACE_BENCH_DSH_SKILLS_DIR/"; \
        done
 
 RUN command -v soffice \
@@ -174,13 +158,6 @@ RUN for skill in docx pdfs slides spreadsheets; do \
     done \
     && for skill in docx pdf pptx xlsx; do \
       test -f "$WORKSPACE_BENCH_CLAUDE_CONFIG_DIR/skills/$skill/SKILL.md"; \
-    done \
-    && for skill in docx pdf pdfs pptx slides xlsx spreadsheets; do \
-      test -f "$WORKSPACE_BENCH_OPENCLAW_SKILLS_DIR/$skill/SKILL.md"; \
-      test -f "$WORKSPACE_BENCH_DEEPAGENTS_SKILLS_DIR/$skill/SKILL.md"; \
-    done \
-    && for skill in docx pdf pptx xlsx; do \
-      test -f "$WORKSPACE_BENCH_DSH_SKILLS_DIR/$skill/SKILL.md"; \
     done
 
 COPY skills/email/imap-smtp-email-chinese/package.json /opt/workspace-bench/mail-skill/package.json

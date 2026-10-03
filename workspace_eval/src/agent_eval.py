@@ -27,7 +27,7 @@ agent_eval.py
 本文件用于对“单个任务执行结果目录”进行离线评测与结构化产物生成，主要做两件事：
 
 1) rubric 评测（LLM-as-a-judge）
-   - 输入：task_dir 下的 metadata.json（包含 rubrics）、执行 trace（agent.json/result.json/session.jsonl 等）、以及工作目录/输出文件摘录
+   - 输入：task_dir 下的 metadata.json（包含 rubrics）、执行 trace（agent.json/result.json 等）、以及工作目录/输出文件摘录
    - 输出：rubrics_judge--<model_name>.json（每条 rubric 的 passed/evidence/confidence）
 
 2) 依赖图（I/O Dependency Graph）构建
@@ -35,7 +35,7 @@ agent_eval.py
    - 输出：dependency_graph--<model_name>.json（nodes/edges）
 
 设计要点：
-- 对不同 agent runner 产物做兼容解析（openclaw / batch-test / evaluation_sys agent.json）。
+- 对不同 agent runner 产物做兼容解析（batch-test / evaluation_sys agent.json）。
 - 评测 prompt 做截断与去噪，避免把海量 trace/文件内容塞进 judge 模型。
 - judge 调用带重试与总时间上限，避免 429/限流导致评测卡死。
 """
@@ -117,8 +117,6 @@ def _detect_agent_kind(task_dir: str) -> str:
         return str(rj.get("runner"))
     if os.path.exists(os.path.join(task_dir, "batch_test_report.json")):
         return "batch-test"
-    if os.path.exists(os.path.join(task_dir, "session.jsonl")):
-        return "openclaw"
     return "unknown"
 
 
@@ -874,7 +872,7 @@ def _extract_trace(task_dir: str, kind: str) -> Dict[str, Json]:
     """
     兼容多种 runner 的 trace 解析入口。
     优先读取 evaluation_sys 的 agent.json（trace.executionTrace / trace.llm / trace.outputs 等），
-    否则根据 kind 退化到 openclaw/batch-test 的产物格式。
+    否则根据 kind 退化到 batch-test 的产物格式。
     """
     agent_json = _safe_load_json(os.path.join(task_dir, "agent.json"))
     if isinstance(agent_json, dict):
@@ -895,16 +893,6 @@ def _extract_trace(task_dir: str, kind: str) -> Dict[str, Json]:
                 "llm": llm_info,
             }
     rj = _safe_load_json(os.path.join(task_dir, "result.json"))
-    if kind == "openclaw" and isinstance(rj, dict):
-        trace = rj.get("trace")
-        if isinstance(trace, dict):
-            tc = trace.get("toolCalls")
-            tos = trace.get("textOutputs")
-            return {
-                "toolCalls": tc if isinstance(tc, list) else [],
-                "textOutputs": tos if isinstance(tos, list) else [],
-                "metrics": rj.get("metrics") if isinstance(rj.get("metrics"), dict) else None,
-            }
     if kind == "batch-test" and isinstance(rj, dict):
         tr = rj.get("taskResult")
         if isinstance(tr, dict):
@@ -1473,78 +1461,6 @@ def _node_id(work_dir: str, abs_path: str) -> str:
     return os.path.basename(ap)
 
 
-def _extract_openclaw_toolcalls(task_dir: str) -> List[Dict[str, Json]]:
-    """
-    从 openclaw 的产物中抽取工具调用列表。
-    优先 result.json.trace.toolCalls，否则解析 session.jsonl（assistant/toolResult）。
-    """
-    rj = _safe_load_json(os.path.join(task_dir, "result.json"))
-    if isinstance(rj, dict):
-        tr = rj.get("trace")
-        if isinstance(tr, dict) and isinstance(tr.get("toolCalls"), list):
-            out = []
-            for tc in tr.get("toolCalls"):
-                if isinstance(tc, dict) and isinstance(tc.get("tool"), str):
-                    out.append(tc)
-            return out
-    sess = os.path.join(task_dir, "session.jsonl")
-    if not os.path.exists(sess) or not os.path.isfile(sess):
-        return []
-    tool_calls: List[Dict[str, Json]] = []
-    idx: Dict[str, Dict[str, Json]] = {}
-    try:
-        with open(sess, "r", encoding="utf-8") as f:
-            for raw in f:
-                line = raw.strip()
-                if not line:
-                    continue
-                try:
-                    evt = json.loads(line)
-                except Exception:
-                    continue
-                if not isinstance(evt, dict) or evt.get("type") != "message":
-                    continue
-                msg = evt.get("message")
-                if not isinstance(msg, dict):
-                    continue
-                role = msg.get("role")
-                ts = evt.get("timestamp")
-                if role == "assistant":
-                    content = msg.get("content")
-                    if not isinstance(content, list):
-                        continue
-                    for part in content:
-                        if not isinstance(part, dict) or part.get("type") != "toolCall":
-                            continue
-                        call_id = part.get("id")
-                        name = part.get("name")
-                        args = part.get("arguments")
-                        if not isinstance(call_id, str) or not call_id or not isinstance(name, str) or not name:
-                            continue
-                        entry: Dict[str, Json] = {
-                            "tool": name,
-                            "callID": call_id,
-                            "timestamp": ts,
-                            "input": args if isinstance(args, dict) else {},
-                            "state": "running",
-                            "output": None,
-                        }
-                        tool_calls.append(entry)
-                        idx[call_id] = entry
-                elif role == "toolResult":
-                    call_id = msg.get("toolCallId")
-                    if not isinstance(call_id, str) or not call_id:
-                        continue
-                    entry = idx.get(call_id)
-                    if entry is None:
-                        continue
-                    entry["state"] = "completed"
-                    entry["output"] = msg.get("details") if msg.get("details") is not None else msg.get("content")
-    except Exception:
-        return []
-    return tool_calls
-
-
 def _extract_batch_toolcalls(task_dir: str) -> List[Dict[str, Json]]:
     """从 batch-test 产物中抽取 toolCalls（result.json 或 batch_test_report.json）。"""
     rj = _safe_load_json(os.path.join(task_dir, "result.json"))
@@ -1625,12 +1541,7 @@ def _build_dependency_graph(task_dir: str) -> Dict[str, Json]:
     
     tool_calls = _extract_execution_trace_toolcalls(task_dir)
     if not tool_calls:
-        if kind == "openclaw":
-            tool_calls = _extract_openclaw_toolcalls(task_dir)
-        elif kind == "batch-test":
-            tool_calls = _extract_batch_toolcalls(task_dir)
-        else:
-            tool_calls = _extract_batch_toolcalls(task_dir) or _extract_openclaw_toolcalls(task_dir)
+        tool_calls = _extract_batch_toolcalls(task_dir)
 
     nodes: set = set()
     edges: set = set()

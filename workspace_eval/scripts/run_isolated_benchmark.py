@@ -625,10 +625,6 @@ def _runtime_allowlist_volumes(
         (eval_root / "node_modules", CONTAINER_EVAL_ROOT / "node_modules"),
         (eval_root / "vendor", CONTAINER_EVAL_ROOT / "vendor"),
         (
-            repo_root / "deepagents" / "libs",
-            CONTAINER_REPO_ROOT / "deepagents" / "libs",
-        ),
-        (
             repo_root / "skills" / "email",
             CONTAINER_REPO_ROOT / "skills" / "email",
         ),

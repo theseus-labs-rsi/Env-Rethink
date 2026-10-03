@@ -8,7 +8,7 @@
 
 ## 它和别的 harness 的区别
 
-别的 harness（`codex` / `claudecode` / `deepagent` / …）是**在 harness 容器里直接起子进程**。
+别的 harness（`codex` / `claudecode` / …）是**在 harness 容器里直接起子进程**。
 这个是**用 agentkit 另起一个一次性容器**跑 agent，把 `work_dir` 挂进去：
 
   · **每个 case 一个干净容器** —— 任务之间不互相污染；
