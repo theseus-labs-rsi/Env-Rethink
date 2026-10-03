@@ -57,6 +57,8 @@ def main() -> int:
             continue
         sid = d.name
         ws = d / "workspace"
+        if not ws.is_dir():
+            continue
         task_out = out / sid
         data = task_out / "data"
         data.mkdir(parents=True)
@@ -65,11 +67,13 @@ def main() -> int:
             if not f.is_file():
                 continue
             rel = f.relative_to(ws)
-            shutil.copy2(f, data / rel.name)
+            destination = data / rel
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(f, destination)
             manifest.append({
                 "filename": rel.name,
-                "stored_relpath": "data/" + rel.name,
-                "target_path": str(rel),
+                "stored_relpath": (Path("data") / rel).as_posix(),
+                "target_path": rel.as_posix(),
                 "input_role": "noise",
             })
         meta = {
@@ -83,7 +87,7 @@ def main() -> int:
             "data_manifest": manifest,
         }
         (task_out / "metadata.json").write_text(
-            json.dumps(meta, ensure_ascii=False, indent=1)
+            json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8"
         )
         made.append(sid)
     print(len(made), "eval tasks ->", out)

@@ -16,7 +16,9 @@ from __future__ import annotations
 import base64
 import gzip
 import json
+import math
 import os
+import re
 import time
 
 from dataclasses import dataclass, field
@@ -317,52 +319,72 @@ async def run_verifier(runtime: DockerRuntime, *, test_timeout: int,
         return await _direct_pytest(runtime, test_timeout, workdir, log=log)
 
     result = await runtime.run_command(
-        f"mkdir -p {VERIFIER_DIR} && cd {workdir} && "
+        f"set -o pipefail; mkdir -p {VERIFIER_DIR} && "
+        f"rm -f {VERIFIER_DIR}/reward.txt && cd {workdir} && "
         f"bash /tests/test.sh 2>&1 | tee {VERIFIER_DIR}/test_output.txt",
         timeout=test_timeout,
     )
     output = (result.stdout or "") + (result.stderr or "")
+    if result.return_code == 124:
+        raise RuntimeError(f"判分器超时：{output[-1500:]}")
     reward = await _read_reward(runtime)
     if reward is not None:
+        if result.return_code not in (0, 1) or (reward == 0 and re.search(
+            r"(?m)^(?:\S+:\s*)?No module named pytest\b|^ERROR:\s|"
+            r"^_{3,}\s*ERROR collecting\b|\bno tests ran\b|^INTERNALERROR[>:]|"
+            r"^/tests/test\.sh: line \d+: (?:pytest|uvx|uv|python3|pip): command not found$|"
+            r"^error: (?:Failed to (?:download|fetch|build)|Request failed|No solution found)",
+            output,
+        )):
+            raise RuntimeError(f"判分器未正常运行（rc={result.return_code}）：{output[-1500:]}")
         return reward, output, "test.sh"
 
     # test.sh 没落分 → 退化到直接 pytest。
     log("test.sh 未落分 → 退化到直接 pytest 判分")
-    probe = await runtime.run_command(
-        'python3 -c "import pytest" && ls /tests/test_*.py >/dev/null 2>&1 && echo direct-ok',
-        timeout=120,
-    )
-    if "direct-ok" not in (probe.stdout or ""):
-        raise RuntimeError(
-            f"test.sh 没有产出可用分数，直接 pytest 也不可用：{(probe.stdout or '')[-300:]}"
-        )
     r2, out2, path = await _direct_pytest(runtime, test_timeout, workdir, log=log)
     return r2, output + "\n[fallback: direct pytest]\n" + out2, path + "(fallback)"
 
 
 async def _direct_pytest(runtime: DockerRuntime, test_timeout: int, workdir: str, *, log=print
                          ) -> tuple[float, str, str]:
+    probe = await runtime.run_command(
+        'python3 -c "import pytest" && ls /tests/test_*.py >/dev/null 2>&1', timeout=120
+    )
+    if probe.return_code != 0:
+        detail = (probe.stdout or "") + (probe.stderr or "")
+        raise RuntimeError(f"直接 pytest 不可用（rc={probe.return_code}）：{detail[-1500:]}")
     result = await runtime.run_command(
-        f"mkdir -p {VERIFIER_DIR} && echo 0 > {VERIFIER_DIR}/reward.txt && cd {workdir} && "
-        f"(python3 -m pytest --ctrf {VERIFIER_DIR}/ctrf.json /tests/test_*.py -rA; "
-        f"rc=$?; [ $rc -eq 0 ] && echo 1 > {VERIFIER_DIR}/reward.txt || echo 0 > {VERIFIER_DIR}/reward.txt) "
+        f"set -o pipefail; mkdir -p {VERIFIER_DIR} && "
+        f"rm -f {VERIFIER_DIR}/reward.txt {VERIFIER_DIR}/ctrf.json && cd {workdir} && "
+        f"python3 -m pytest --ctrf {VERIFIER_DIR}/ctrf.json /tests/test_*.py -rA "
         f"2>&1 | tee -a {VERIFIER_DIR}/test_output.txt",
         timeout=test_timeout,
     )
     output = (result.stdout or "") + (result.stderr or "")
-    reward = await _read_reward(runtime)
-    return (reward if reward is not None else 0.0), output, "direct-pytest"
+    if result.return_code not in (0, 1):
+        raise RuntimeError(f"直接 pytest 基础设施错误（rc={result.return_code}）：{output[-1500:]}")
+    reward = 1.0 if result.return_code == 0 else 0.0
+    await runtime.put_text(f"{VERIFIER_DIR}/reward.txt", f"{reward:g}\n")
+    return reward, output, "direct-pytest"
 
 
 async def _read_reward(runtime: DockerRuntime) -> float | None:
-    reward = await runtime.run_command(f"cat {VERIFIER_DIR}/reward.txt 2>/dev/null || true", timeout=120)
+    reward = await runtime.run_command(
+        f"if [ -f {VERIFIER_DIR}/reward.txt ]; then cat {VERIFIER_DIR}/reward.txt; else exit 3; fi",
+        timeout=120,
+    )
+    if reward.return_code == 3:
+        return None
+    if reward.return_code != 0:
+        raise RuntimeError(f"读取判分结果失败（rc={reward.return_code}）：{reward.stderr[-1500:]}")
     raw = (reward.stdout or "").strip()
-    if not raw:
-        return None
     try:
-        return float(raw.split()[-1])
-    except (ValueError, IndexError):
-        return None
+        value = float(raw)
+    except ValueError as exc:
+        raise RuntimeError(f"无效判分结果：{raw!r}") from exc
+    if not math.isfinite(value) or not 0 <= value <= 1:
+        raise RuntimeError(f"判分结果必须是 [0, 1] 内的有限数：{raw!r}")
+    return value
 
 
 # ── 产物回收 ──────────────────────────────────────────────────────────

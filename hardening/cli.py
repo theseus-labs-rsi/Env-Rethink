@@ -160,20 +160,22 @@ async def _run_batch(args: argparse.Namespace) -> int:
     await asyncio.gather(*jobs)
 
     print("\n=== 汇总 ===")
-    by_arm: dict[str, list[float]] = {}
+    by_arm: dict[str, list[dict]] = {}
     for r in results:
-        by_arm.setdefault(r["arm"].split("__")[0], []).append(float(r.get("reward") or 0.0))
-    for arm, rewards in sorted(by_arm.items()):
+        by_arm.setdefault(r["arm"].split("__")[0], []).append(r)
+    for arm, runs in sorted(by_arm.items()):
+        rewards = [float(r.get("reward") or 0.0) for r in runs if r.get("status") == "ok"]
         n = len(rewards)
         ok = sum(rewards)
-        print(f"  {arm:44s} n={n:3d}  accuracy={ok / n:.0%}  ({ok:.0f}/{n})")
-    errors = [r for r in results if r.get("status") == "error"]
+        accuracy = f"{ok / n:.0%}  ({ok:.0f}/{n})" if n else "unavailable"
+        print(f"  {arm:44s} n={n:3d}/{len(runs)}  accuracy={accuracy}")
+    errors = [r for r in results if r.get("status") != "ok"]
     if errors:
-        print(f"\n  ⚠ {len(errors)} 个 run 出错：")
+        print(f"\n  [error] {len(errors)} 个 run 出错（不计入 accuracy）：")
         for r in errors[:5]:
-            print(f"    {r['arm']}: {r['error'][:200]}")
+            print(f"    {r['arm']}: {str(r.get('error') or r.get('status'))[:200]}")
     print(f"\n明细：{out_dir / 'results.jsonl'}")
-    return 0
+    return 1 if errors else 0
 
 
 def cmd_eval(args: argparse.Namespace) -> int:
@@ -248,7 +250,7 @@ def cmd_rounds(args: argparse.Namespace) -> int:
     # ② 装配 build/
     build = variant_dir / "build"
     proc = subprocess.run(
-        ["python3", str(C.TOOLS / "build_variant.py"), str(variant_dir)],
+        [sys.executable, str(C.TOOLS / "build_variant.py"), str(variant_dir)],
         capture_output=True, text=True, cwd=C.HERE,
     )
     print(f"=== 装配 rc={proc.returncode} ===\n{proc.stdout[-1500:]}{proc.stderr[-800:]}")
@@ -257,10 +259,12 @@ def cmd_rounds(args: argparse.Namespace) -> int:
 
     # ③ 机械闸
     proc = subprocess.run(
-        ["python3", str(C.TOOLS / "gate_check.py"), str(variant_dir), "--write-report"],
+        [sys.executable, str(C.TOOLS / "gate_check.py"), str(variant_dir), "--write-report"],
         capture_output=True, text=True, cwd=C.HERE,
     )
     print(f"=== 机械闸 rc={proc.returncode} ===\n{proc.stdout[-2500:]}{proc.stderr[-800:]}")
+    if proc.returncode != 0:
+        return 1
 
     # ④ 建镜像（题目镜像 + agent 层）
     image = task_agent_image(f"{task_name}-{vid}", task_dir=build, tag=args.tag)

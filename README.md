@@ -70,7 +70,7 @@ source .venv/bin/activate
 python -m pip install -r envgen/requirements.lock.txt -r hardening/requirements.txt
 ```
 
-These dependencies cover `envgen` and the hardening tools. Full workspace evaluation also requires a prepared runtime image and its harness-specific dependencies; the complete upstream Workspace-Bench build context and Python dependency manifests are not included in this snapshot.
+These dependencies cover `envgen` and the hardening tools. Full workspace evaluation uses the bundled Docker build, which installs the locked evaluation Python project, Claude Agent SDK, and Office tools from this checkout.
 
 ### Generate a Snapshot Event Log
 
@@ -156,7 +156,7 @@ Edit the generated YAML before using it: replace inherited `evaluation/` paths w
 docker compose -f workspace_eval/docker/docker-compose.yaml build
 ```
 
-Then set `runtime.expected_image_id` to the resulting image ID (`docker image inspect workspace-bench:local --format='{{.Id}}'`). The build needs no assets from outside this checkout.
+Then set `runtime.expected_image_id` to the resulting image ID (`docker image inspect workspace-bench:local --format='{{.Id}}'`). The build needs no assets from outside this checkout. Set `agent.harness` to `Codex` (the default) or `ClaudeCode` to select the task-solving agent; the rubric judge uses ClaudeCode. The image keeps its SDK dependencies outside the mounted checkout.
 
 ```bash
 # Validate the configuration and task structure without starting containers.
@@ -223,6 +223,8 @@ The model curator labels files in batches, materializes a selected workspace wit
 | [Workspace Curation](curate/README.md) | Curator endpoints, baselines, file selection, downstream evaluation |
 
 For reproducible comparisons, record the task/workspace snapshot, runtime image ID, harness and model versions, condition, and generation seeds. Keep rubric-guided or oracle context constructions separate from task-independent context conditions. Private audit records, rubrics, and reference answers must remain outside the task-solving agent's view.
+
+Judge runtime errors and incomplete responses are recorded as failed cases without a score. A completed judgment that fails every rubric remains a valid zero score.
 
 ## License and Data Provenance
 

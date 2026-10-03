@@ -21,8 +21,10 @@ import asyncio
 import base64
 import io
 import posixpath
+import shlex
 import tarfile
 import time
+import uuid
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -163,7 +165,16 @@ class DockerRuntime:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        out, err = await proc.communicate(stdin)
+        try:
+            out, err = await proc.communicate(stdin)
+        except BaseException:
+            if proc.returncode is None:
+                try:
+                    proc.kill()
+                except ProcessLookupError:
+                    pass
+            await proc.communicate()
+            raise
         if check and proc.returncode != 0:
             raise RuntimeError(
                 f"docker {' '.join(args[:3])} 失败 rc={proc.returncode}："
@@ -173,29 +184,89 @@ class DockerRuntime:
 
     # ── 1) run_command ────────────────────────────────────────────────
 
+    async def _terminate_command_group(self, pid_path: str) -> None:
+        """Stop the container process group, including command subprocesses."""
+        script = f"""for attempt in 1 2 3 4 5; do
+  [ -f {shlex.quote(pid_path)} ] && break
+  sleep 0.1
+done
+[ -f {shlex.quote(pid_path)} ] || exit 3
+read -r command_pid < {shlex.quote(pid_path)}
+case "$command_pid" in ''|*[!0-9]*) exit 2;; esac
+[ "$command_pid" -gt 1 ] || exit 2
+kill -TERM -- "-$command_pid" 2>/dev/null || true
+for attempt in 1 2 3 4 5; do
+  kill -0 -- "-$command_pid" 2>/dev/null || break
+  sleep 0.1
+done
+kill -KILL -- "-$command_pid" 2>/dev/null || true
+rm -f {shlex.quote(pid_path)}
+"""
+        await asyncio.wait_for(
+            self._docker(["exec", self.name, "bash", "-c", script]), timeout=30
+        )
+
+    async def _interrupt_command(self, proc, communication, pid_path: str) -> tuple[bytes, bytes]:
+        try:
+            await self._terminate_command_group(pid_path)
+        except Exception:
+            # Missing process metadata is also a cleanup failure: exec may not
+            # have started yet. Stop our container before tests can be uploaded.
+            await self._docker(["stop", "-t", "0", self.name], check=False)
+            raise
+        finally:
+            if proc.returncode is None:
+                try:
+                    proc.kill()
+                except ProcessLookupError:
+                    pass
+            try:
+                await asyncio.wait_for(asyncio.shield(communication), timeout=30)
+            except Exception:
+                communication.cancel()
+                await asyncio.gather(communication, return_exceptions=True)
+        return communication.result()
+
     async def run_command(self, command: str, timeout: int | float = 600) -> CommandResult:
         """在容器内跑一条 shell 命令。
 
-        超时**不抛异常**，而是返回 124/空 stdout：调用方自己决定超时意味着什么
-        （判分器要落分、探活要重试），别在这里替它决定。
+        超时返回 124，并先终止容器内命令的整个进程组，避免它与后续判分重叠。
+        终止失败时抛异常，调用方必须把它作为基础设施错误处理。
         """
         started = time.monotonic()
+        pid_path = f"/tmp/tb-command-{uuid.uuid4().hex}.pid"
+        # Bash job control gives this one child its own process group without
+        # requiring setsid in every task image. Its nested shells inherit that
+        # group, so terminating it also stops agent tools and verifier children.
+        launcher = (
+            "set -m\n"
+            f"bash -c {shlex.quote(command)} &\n"
+            "command_pid=$!\n"
+            f"printf '%s\\n' \"$command_pid\" > {shlex.quote(pid_path)}\n"
+            "wait \"$command_pid\"\n"
+            "command_rc=$?\n"
+            "exit \"$command_rc\"\n"
+        )
         proc = await asyncio.create_subprocess_exec(
-            "docker", "exec", self.name, "bash", "-c", command,
+            "docker", "exec", self.name, "bash", "-c", launcher,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
+        communication = asyncio.create_task(proc.communicate())
         try:
-            out, err = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+            out, err = await asyncio.wait_for(asyncio.shield(communication), timeout=timeout)
             rc = proc.returncode or 0
         except asyncio.TimeoutError:
-            proc.kill()
-            try:
-                out, err = await asyncio.wait_for(proc.communicate(), timeout=30)
-            except Exception:  # noqa: BLE001
-                out, err = b"", b""
+            out, err = await self._interrupt_command(proc, communication, pid_path)
             rc = 124
             err = (err or b"") + f"\n[本地 runtime] 命令超过 {timeout}s 被中断".encode()
+        except asyncio.CancelledError:
+            await self._interrupt_command(proc, communication, pid_path)
+            raise
+        else:
+            # Keep the group id while communicate waits for inherited pipes;
+            # the command shell can exit before its background children do.
+            await self._docker(["exec", self.name, "rm", "-f", pid_path])
         result = CommandResult(
             command=command,
             stdout=(out or b"").decode("utf-8", "replace"),

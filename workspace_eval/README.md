@@ -42,10 +42,12 @@ scripts/run_experiment.py --config <yaml>
 数据怎么办还没定：搬 / 用脚本从 HuggingFace 下载 / 只留接口。见 `.env.example` 与
 `scripts/download_hf_assets.py`。
 
-## 复用 agentkit：新增 `agentkit` harness
+## 复用 agentkit：低层适配器
 
 `agent_runner.py` 用 `_load_agent_run("<name>")` 加载 `src/agents/<name>.py` 并调它的 `run()`，
-所以本仓往 `src/agents/` 放了一个 **`agentkit.py`** —— 实验 yaml 里写 `harness: agentkit` 即可。
+本仓保留 **`agentkit.py`**，供可访问 Docker 的自定义 runtime 用低层 `agent_name: agentkit` 配置调用。
+内置 local 实验入口通过 `agent.harness: Codex`（缺省）或 `agent.harness: ClaudeCode` 选择 harness；
+也兼容顶层 `harness` 字段。该严格容器入口不提供嵌套 Docker 所需的运行条件。
 
 它和别的 harness 的区别：
 
@@ -120,9 +122,8 @@ export TB_BASE_URL=... TB_API_KEY=... TB_MODEL=...    # 模型连接（api_provi
 
 ## 三个要保留的机制
 
-1. **harness 由模型决定**：`远程 agent 配置/agent_select.py` 有一张"模型家族 → agent"的映射
-   （gpt→codex、其它→claude_code），判据只看模型标识。
-   搬进来后这应当是**唯一**的选型入口，别让 YAML 里的 `harness:` 和它打架。
+1. **harness 显式选择**：内置 local 入口读取 `agent.harness`，缺省为 Codex，支持 ClaudeCode。
+   非内置 runtime 的选择规则由对应插件实现。
 2. **condition 是正式概念**：`clean | noise | curated | task_files`。
    `condition=curated` 有硬守卫 —— 每个 task 目录必须带 `curation.json`（模块 ④ 的产物），
    缺了就 `SystemExit`。

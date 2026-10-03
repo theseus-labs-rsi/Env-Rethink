@@ -1075,9 +1075,9 @@ def run(
 
     st = str(tr.get("status") or "").strip().lower()
     status = "ok"
-    if st == "timeout":
+    if exit_code == 124 or st == "timeout":
         status = "timeout"
-    elif st != "passed":
+    elif exit_code != 0 or st != "passed":
         status = "error"
 
     usage_total, provider2, model2 = _parse_usage_from_stdout(tr.get("stdout") if isinstance(tr.get("stdout"), str) else "")
@@ -1119,7 +1119,10 @@ def run(
         err_msg = f"Timeout after {timeout_s}s"
     elif status == "error":
         em = tr.get("errorMessage") if isinstance(tr, dict) else None
-        err_msg = str(em) if isinstance(em, str) and em else (stderr_text[:2000] if isinstance(stderr_text, str) else "claudecode error")
+        stderr_message = stderr_text[:2000] if isinstance(stderr_text, str) else ""
+        err_msg = (str(em) if isinstance(em, str) and em else stderr_message) or (
+            f"ClaudeCode runner exited with code {exit_code}" if exit_code else "claudecode error"
+        )
 
     return {
         "status": status,

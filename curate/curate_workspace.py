@@ -43,6 +43,7 @@ import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -79,6 +80,25 @@ PREPROCESSED_ROOT = EVAL / ".generated" / "preprocessed"
 OCR_CACHE = EVAL / ".generated" / "noise_id_subenvs" / "_ocr" / "cache.json"
 ENV_FILE = EVAL / ".env"
 
+
+def _load_env(name: str) -> str:
+    """Read a process override or a dotenv value without exposing credentials."""
+    if os.environ.get(name):
+        return os.environ[name]
+    if ENV_FILE.is_file():
+        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line.startswith("export "):
+                line = line[7:].lstrip()
+            key, separator, value = line.partition("=")
+            if separator and key.strip() == name:
+                value = value.strip()
+                quoted = re.fullmatch(r"(['\"])(.*?)\1(?:\s+#.*)?", value)
+                if quoted:
+                    return quoted.group(2)
+                return re.split(r"\s+#", value, maxsplit=1)[0].rstrip()
+    return ""
+
 # 设计文档 §3 的 15 个父任务（1,579 文件 / 83 standard）
 TASKS = ["374", "357", "372", "154", "314", "258", "108", "291", "160",
          "207", "267", "288", "129", "94", "334",
@@ -100,19 +120,19 @@ LABELS_OUT = "noise_labels.json"
 # 可用 --base-url / --model-id / --model-name 覆盖。
 def _curator_env(slug: str, field: str, default: str = "") -> str:
     prefix = f"ENV_RETHINK_{slug}" if slug else "ENV_RETHINK"
-    return os.environ.get(f"{prefix}_{field}".upper(), default)
+    return _load_env(f"{prefix}_{field}".upper()) or default
 
 
 MODEL_CURATORS = {
     "env-rethink": {
         "model": _curator_env("", "model"),
-        "model_id": _curator_env("", "model_id"),
+        "model_id": _curator_env("", "model_id") or _curator_env("", "model"),
         "base_url": _curator_env("", "base_url"),
         "api_key_env": "ENV_RETHINK_API_KEY",
     },
     "qwen": {
         "model": _curator_env("qwen", "model"),
-        "model_id": _curator_env("qwen", "model_id"),
+        "model_id": _curator_env("qwen", "model_id") or _curator_env("qwen", "model"),
         "base_url": _curator_env("qwen", "base_url"),
         "api_key_env": "ENV_RETHINK_QWEN_API_KEY",
     },
@@ -121,7 +141,7 @@ MODEL_CURATORS = {
 #: 需要调模型的构造器（对照 rule/gt 这类纯离线基线）
 MODEL_CURATOR_NAMES = tuple(MODEL_CURATORS)
 #: 全部构造器
-ALL_CURATORS = MODEL_CURATOR_NAMES + ("rule", "gt")
+ALL_CURATORS = MODEL_CURATOR_NAMES + ("rule", "gt", "all")
 
 # 下游评估：模型 → (模型目录, 源 noise v2 yaml, name slug)；agent/judge 块逐字复用
 DOWNSTREAM_MODELS = {
@@ -173,7 +193,7 @@ def _parse_tasks(spec: str) -> list[str]:
 
 
 def norm_path(p: str) -> str:
-    p = str(p or "").strip()
+    p = str(p or "").strip().replace("\\", "/")
     while p.startswith("./"):
         p = p[2:]
     return p.lstrip("/")
@@ -255,6 +275,8 @@ def build_curate_yaml(curator: str, batch_ids: list[str],
                       model_overrides: dict | None = None) -> Path:
     mc = dict(MODEL_CURATORS[curator])
     mc.update(model_overrides or {})
+    mc["model"] = str(mc.get("model") or mc.get("model_id") or "").strip()
+    mc["model_id"] = str(mc.get("model_id") or mc["model"]).strip()
     runtime_block = {
         "provider": BACKEND,
         "local_root": "/tmp",
@@ -327,18 +349,6 @@ def build_curate_yaml(curator: str, batch_ids: list[str],
 
 # ---------------------------------------------------------------- 端点探测
 
-def _load_env(name: str) -> str:
-    import os
-    if os.environ.get(name):
-        return os.environ[name]
-    if ENV_FILE.is_file():
-        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line.startswith(f"{name}="):
-                return line.split("=", 1)[1].strip()
-    return ""
-
-
 def probe_endpoint(base_url: str, key_env: str) -> bool:
     """连接级存活探测（任何 HTTP 应答都算服务在；连接失败/超时才算死）。"""
     url = base_url.rstrip("/") + "/v1/models"
@@ -404,6 +414,8 @@ def cmd_run(args) -> int:
     cfg = yaml.safe_load(config.read_text(encoding="utf-8"))
     base_url = str(cfg.get("agent", {}).get("base_url")
                    or MODEL_CURATORS[curator]["base_url"])
+    if not base_url.strip():
+        sys.exit("模型端点未配置；设置 curator 的 BASE_URL 环境变量或 .env，或在 prepare 时使用 --base-url")
     if not probe_endpoint(base_url, MODEL_CURATORS[curator]["api_key_env"]):
         sys.exit(f"端点不可达，先用 --base-url 指向新部署再跑: {base_url}")
     # 容器内 SDK 会按 http_proxy 走代理，而代理对裸 IP 的 CONNECT 会拒绝。
@@ -428,6 +440,7 @@ def cmd_run(args) -> int:
 
 def load_batch_labels(exp_dirs: list[Path], batch_id: str):
     """从实验目录读批次 labels；返回 (labels dict, 来源 exp, 错误说明)。"""
+    last_error = (None, None, "missing label file")
     for exp in exp_dirs:
         cand = exp / "cases" / f"task{batch_id}" / "agent" / "output" / LABELS_OUT
         if not cand.is_file():
@@ -435,16 +448,21 @@ def load_batch_labels(exp_dirs: list[Path], batch_id: str):
         try:
             d = _load_json(cand)
         except Exception as e:  # noqa: BLE001
-            return None, exp, f"bad json: {e}"
-        files = d.get("files")
+            last_error = (None, exp, f"bad json: {e}")
+            continue
+        files = d.get("files") if isinstance(d, dict) else None
         if not isinstance(files, list) or not files:
-            return None, exp, "no files[]"
+            last_error = (None, exp, "no files[]")
+            continue
         labels = {}
         for f in files:
             if isinstance(f, dict) and f.get("path"):
                 labels[norm_path(f["path"])] = f
+        if not labels:
+            last_error = (None, exp, "no valid file labels")
+            continue
         return labels, exp, None
-    return None, None, "missing label file"
+    return last_error
 
 
 def load_batch_cost(exp_dirs: list[Path], batch_id: str) -> dict:
@@ -702,6 +720,7 @@ def cmd_rule(args) -> int:
                 "filename": e["filename"],
                 "stored_relpath": e["stored_relpath"],
                 "uncovered": False, "selected": selected,
+                "pred_partition": "standard" if selected else "noise",
                 "rules_fired": fired,
             })
             if selected:

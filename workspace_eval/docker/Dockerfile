@@ -7,7 +7,7 @@
 # image:
 #
 #     docker compose -f workspace_eval/docker/docker-compose.yaml build
-#     # or: docker build -t workspace-bench:local workspace_eval
+#     # or: docker build -f workspace_eval/docker/Dockerfile -t workspace-bench:local workspace_eval
 #
 # The build context is `workspace_eval/` (as set in the compose file), so every
 # COPY source below is relative to that directory. Container-internal paths keep
@@ -26,6 +26,7 @@ ENV RIP_BENCH_ROOT=/workspace/Workspace-Bench
 ENV RIP_BENCH_EVAL_ROOT=/workspace/Workspace-Bench/evaluation
 ENV CODEX_SANDBOX_MODE=danger-full-access
 ENV WORKSPACE_BENCH_OFFICE_RUNTIME=/opt/workspace-bench/office-runtime
+ENV WORKSPACE_BENCH_NODE_MODULES=/opt/workspace-bench/evaluation-node/node_modules
 ENV CODEX_HOME=/opt/workspace-bench/agent-homes/codex/.codex
 ENV WORKSPACE_BENCH_CODEX_HOME_TEMPLATE=/opt/workspace-bench/agent-homes/codex/.codex
 ENV WORKSPACE_BENCH_CLAUDE_CONFIG_DIR=/opt/workspace-bench/agent-homes/claude/.claude
@@ -34,7 +35,7 @@ ENV UV_PYTHON_INSTALL_DIR=/opt/uv/python
 ENV UV_PROJECT_ENVIRONMENT=/opt/workspace-bench/evaluation-venv
 ENV UV_LINK_MODE=copy
 ENV PATH=/opt/workspace-bench/evaluation-venv/bin:/root/.local/bin:$PATH
-ENV NODE_PATH=/opt/workspace-bench/office-runtime/node_modules
+ENV NODE_PATH=/opt/workspace-bench/evaluation-node/node_modules:/opt/workspace-bench/office-runtime/node_modules
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     antiword \
@@ -135,11 +136,12 @@ RUN mkdir -p "$TIKTOKEN_CACHE_DIR" \
 COPY docker/office-runtime.package.json /opt/workspace-bench/office-runtime/package.json
 RUN npm install --prefix "$WORKSPACE_BENCH_OFFICE_RUNTIME" --omit=dev
 
-# Node dependencies for the agent/judge driver scripts. `baselines/ClaudeCode.js`
-# imports the Claude Agent SDK from `<eval>/node_modules`, so install the
-# evaluation package.json deps into the image's evaluation directory.
-COPY package.json package-lock.json /workspace/Workspace-Bench/evaluation/
-RUN npm ci --prefix /workspace/Workspace-Bench/evaluation --omit=dev
+# Keep driver dependencies outside evaluation/, which development and task
+# runners may bind mount from a checkout without node_modules. The driver uses
+# WORKSPACE_BENCH_NODE_MODULES and falls back to checkout dependencies on hosts.
+COPY package.json package-lock.json /opt/workspace-bench/evaluation-node/
+RUN npm ci --prefix /opt/workspace-bench/evaluation-node --omit=dev \
+    && node -e 'const fs = require("fs"); const root = process.env.WORKSPACE_BENCH_NODE_MODULES + "/@anthropic-ai/claude-agent-sdk/"; for (const file of ["sdk.mjs", "cli.js"]) if (!fs.existsSync(root + file)) throw new Error("Missing Claude SDK file: " + file)'
 
 # Per-run agent home templates. Upstream seeds these from the Office skill tree;
 # this checkout does not ship that tree, so the directories start empty and the

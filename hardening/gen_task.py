@@ -194,7 +194,7 @@ async def upload_workflow(runtime: DockerRuntime, *, digest: Path | None, failur
         if src.exists():
             shutil.copy2(src, staging / name)
         else:
-            log(f"⚠ 缺方法档 {src}")
+            log(f"[warning] 缺方法档 {src}")
     if digest and digest.exists():
         shutil.copy2(digest, staging / "answers-digest.md")
     if failure_samples and Path(failure_samples).is_file():
@@ -213,7 +213,7 @@ async def upload_workflow(runtime: DockerRuntime, *, digest: Path | None, failur
         shutil.copy2(schema, schema_stage / schema.name)
         counts["schema"] = await upload_dir(runtime, schema_stage, f"{SANDBOX_WORKFLOW}/schema", log=log)
     else:
-        log(f"⚠ 找不到 canonical schema：{schema}")
+        log(f"[warning] 找不到 canonical schema：{schema}")
     return counts
 
 
@@ -269,8 +269,9 @@ def merge_history(variant_dir: Path, prev_dir: str = "", *, log=print) -> dict[s
                     cmd += ["--with", str(ev)]
     rc = subprocess.run(cmd, capture_output=True, text=True)
     if rc.returncode != 0:
-        log(f"⚠ merge_events 未通过：\n{(rc.stdout or '')[-1500:]}")
-        return {"ok": False, "stdout": (rc.stdout or "")[-2000:]}
+        output = (rc.stdout or "") + (rc.stderr or "")
+        log(f"[warning] merge_events 未通过：\n{output[-1500:]}")
+        return {"ok": False, "stdout": output[-2000:]}
     if stats_path.exists():
         return {"ok": True, "stats": json.loads(stats_path.read_text(encoding="utf-8"))}
     return {"ok": True}
@@ -409,6 +410,8 @@ async def run_generation(
         variant_dir = Path(result.out_dir)
         fix_base_marker([variant_dir], str(task_path) if prev_dir else "", log=log)
         result.event_history = merge_history(variant_dir, str(prev_dir) if prev_dir else "", log=log)
+        if not result.event_history.get("ok"):
+            raise RuntimeError(f"事件史校验未通过：{result.event_history.get('stdout', '')[-1500:]}")
         result.status = "ok"
     except Exception as exc:  # noqa: BLE001
         result.status = "error"

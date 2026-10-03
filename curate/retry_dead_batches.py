@@ -38,35 +38,41 @@ from curate_workspace import (  # noqa: E402
     MODEL_CURATOR_NAMES,
     MODEL_CURATORS,
     RUN_EXPERIMENT,
+    norm_path,
 )
 
 
-def collect_exps() -> list[Path]:
+def collect_exps(curator: str) -> list[Path]:
     """所有可能含产出的实验目录（顺序无关：有 labels 即算覆盖）。"""
     exps: list[Path] = []
     # 用通配而不是逐个枚举前缀——曾经因为漏写一个前缀导致产出被漏计。
-    for d in sorted(RUNS.glob("curate-*")):
+    for d in sorted(RUNS.glob(f"curate-{curator}-*")):
         if d.is_dir():
             exps.append(d)
     return exps
 
 
-def dead_batches() -> list[str]:
+def dead_batches(curator: str = MODEL_CURATOR_NAMES[0]) -> list[str]:
     """按**文件覆盖**判断死批，而不是按批次 id。
 
     一个批次算"已覆盖" = 它的每个 target_path 都能在某个实验目录的产出里找到 label。
     这样把大批次拆成子批次跑也能正确计入（子批次产出同样带 target_path）。
     """
-    covered: set[str] = set()
-    for e in collect_exps():
+    covered: dict[str, set[str]] = {}
+    for e in collect_exps(curator):
         for f in e.glob("cases/task*/agent/output/noise_labels.json"):
             try:
                 d = json.loads(f.read_text(encoding="utf-8"))
             except Exception:  # noqa: BLE001
                 continue
-            for x in d.get("files", []) or []:
+            files = d.get("files") if isinstance(d, dict) else None
+            if not isinstance(files, list):
+                continue
+            batch_id = f.parents[2].name.removeprefix("task")
+            task_id = batch_id.split("-b", 1)[0]
+            for x in files:
                 if isinstance(x, dict) and x.get("path"):
-                    covered.add(str(x["path"]).lstrip("./"))
+                    covered.setdefault(task_id, set()).add(norm_path(x["path"]))
     dead = []
     for p in sorted(BATCH_ROOT.glob("*-b*")):
         if not p.is_dir():
@@ -75,7 +81,8 @@ def dead_batches() -> list[str]:
             man = json.loads((p / "metadata.json").read_text(encoding="utf-8"))["data_manifest"]
         except Exception:  # noqa: BLE001
             continue
-        if any(str(e.get("target_path", "")).lstrip("./") not in covered for e in man):
+        task_coverage = covered.get(p.name.split("-b", 1)[0], set())
+        if any(norm_path(e.get("target_path", "")) not in task_coverage for e in man):
             dead.append(p.name)
     return dead
 
@@ -92,11 +99,11 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
-    dead = dead_batches()
+    dead = dead_batches(args.curator)
     total = len([p for p in BATCH_ROOT.glob("*-b*") if p.is_dir()])
     print(f"批次 {total} | 已有产出 {total - len(dead)} | 死批 {len(dead)}")
     if not dead:
-        print("✅ 全部批次均已产出，无需重跑")
+        print("全部批次均已产出，无需重跑")
         return 0
     if args.dry_run:
         print("死批:", dead)

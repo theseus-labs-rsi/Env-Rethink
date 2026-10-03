@@ -35,7 +35,7 @@ OUT_FILE = "model_output/noise_labels.json"
 READ_GUIDE = f"""现在请在这个工作区里执行文件审查。务必【逐个真实打开并阅读工作区里的每一个文件】再下结论：
 - 文本/csv/json/md/无扩展名/eml/bib/url → 用 Read 打开；Read 读不了再试 Bash `cat`/`sed -n`。
 - docx → Read；读不到正文则 `pandoc -t markdown <f>`。
-- xlsx/xls → `soffice --headless --convert-to csv --outdir /tmp <f>` 或 python(openpyxl/pandas)；venv python 是 {CTR_PY}。
+- xlsx/xls → 先 `mkdir -p .file-review-scratch`，再 `soffice --headless --convert-to csv --outdir .file-review-scratch <f>`，或 python(openpyxl/pandas)；venv python 是 {CTR_PY}。临时转换文件放在工作区内的独立 scratch 目录，每个输入可用不同子目录；不要写到工作区外。
 - pdf → 先 `pdftotext -layout <f> -`。
 - 【扫描件/无文本层 pdf / 图片内嵌 docx】→ **必须**用 OCR 接口 `python3 /usr/local/bin/ocr_dump.py '<f>'` 获取机器转录全文（内部等同逐页 OCR，输出可能较长）；若它仍无输出，才允许手动 pdftoppm+tesseract。禁止写 for 循环逐个页去 OCR——用上面的命令一次取全文。
 - 【禁止】只用 ls/find/目录列举代替读文件；不要只读自己生成的派生文件。每个工作区原始文件都必须读到实际内容；一个方法读不到就换方法。

@@ -7,6 +7,7 @@ import os
 import random
 import re
 import shutil
+import sys
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -15,6 +16,7 @@ import yaml
 
 # We reuse dependency-graph builder and metadata helpers to keep I/O aligned.
 import agent_eval as _ae
+from judge_results import is_valid_judge_result
 from provider_auth import load_dotenv, provider_has_credentials
 
 # ClaudeCode baseline runner (wraps evaluation_sys/baselines/ClaudeCode.js).
@@ -228,15 +230,17 @@ def _normalize_rubric_rows(
         if not isinstance(item, dict):
             continue
         index = item.get("index")
-        if not isinstance(index, int) or index < 0 or index >= len(rubrics):
+        if type(index) is not int or index < 0 or index >= len(rubrics):
             continue
         passed = item.get("passed")
+        if not isinstance(passed, bool):
+            continue
         confidence = item.get("confidence")
         evidence = item.get("evidence")
         rows_by_index[index] = {
             "index": index,
             "rubric": rubrics[index] if isinstance(rubrics[index], str) else None,
-            "passed": bool(passed) if isinstance(passed, bool) else False,
+            "passed": passed,
             "confidence": (
                 float(confidence)
                 if isinstance(confidence, (int, float))
@@ -245,34 +249,6 @@ def _normalize_rubric_rows(
             "evidence": str(evidence) if isinstance(evidence, str) else "",
         }
     return [rows_by_index[index] for index in sorted(rows_by_index)]
-
-
-def _complete_rubric_rows(
-    rows: List[Json],
-    rubrics: List[Json],
-    *,
-    error: str,
-) -> List[Json]:
-    """Fill omitted rubric indices as failures so the denominator stays fixed."""
-    rows_by_index = {
-        int(row["index"]): row
-        for row in rows
-        if isinstance(row, dict) and isinstance(row.get("index"), int)
-    }
-    for index, rubric in enumerate(rubrics):
-        if index in rows_by_index:
-            continue
-        rows_by_index[index] = {
-            "index": index,
-            "rubric": rubric if isinstance(rubric, str) else None,
-            "passed": False,
-            "confidence": 0.0,
-            "evidence": (
-                "Judge omitted this configured rubric from its structured "
-                f"response. {error}"
-            ).strip(),
-        }
-    return [rows_by_index[index] for index in range(len(rubrics))]
 
 
 def _safe_remove_path(path: str) -> None:
@@ -655,8 +631,11 @@ def evaluate_task(
         "success": True,
     }
 
-    if not overwrite and os.path.exists(rubrics_out_path):
+    cached = _safe_load_json(rubrics_out_path) if not overwrite else None
+    if is_valid_judge_result(cached, len(rubrics)):
         result["rubricsSkipped"] = True
+        result["rubricsPath"] = rubrics_out_path
+        result["rubricsSummary"] = cached["summary"]
     else:
         sys_prompt = _judge_system_prompt(language)
 
@@ -683,76 +662,75 @@ def evaluate_task(
 
         while True:
             tries += 1
+            # Each attempt stands alone; partial rows and errors from a previous
+            # attempt must never become evidence or scores for this response.
+            err = ""
+            rows = []
+            last_text = ""
+            usage = None
+            prompt = ""
             sandbox_try_dir = os.path.join(sandbox_dir, f"try_{tries}")
-            judge_view = _prepare_judge_view(
-                sandbox_try_dir=sandbox_try_dir,
-                task_dir=task_dir,
-                meta=meta,
-            )
-            prompt = _build_judge_prompt(
-                task_id=task_id,
-                task_dir=task_dir,
-                meta=meta,
-                judge_view=judge_view,
-                language=language,
-            )
-            run_out = _claudecode.run(
-                prompt=sys_prompt + "\n\n" + prompt,
-                work_dir=judge_view["view_dir"],
-                sandbox_dir=sandbox_try_dir,
-                timeout_s=judge_timeout_sec,
-                api_provider=api_provider,
-                agent_id="ClaudeCode.js",
-            )
+            try:
+                judge_view = _prepare_judge_view(
+                    sandbox_try_dir=sandbox_try_dir,
+                    task_dir=task_dir,
+                    meta=meta,
+                )
+                prompt = _build_judge_prompt(
+                    task_id=task_id,
+                    task_dir=task_dir,
+                    meta=meta,
+                    judge_view=judge_view,
+                    language=language,
+                )
+                run_out = _claudecode.run(
+                    prompt=sys_prompt + "\n\n" + prompt,
+                    work_dir=judge_view["view_dir"],
+                    sandbox_dir=sandbox_try_dir,
+                    timeout_s=judge_timeout_sec,
+                    api_provider=api_provider,
+                    agent_id="ClaudeCode.js",
+                )
+            except Exception as exc:
+                run_out = {"status": "error", "errorMessage": f"{type(exc).__name__}: {exc}"}
+            if not isinstance(run_out, dict):
+                run_out = {"status": "error", "errorMessage": "Judge runner returned an invalid result"}
 
-            duration_ms = int((time.time() - started) * 1000)
-            tr = run_out.get("trace") if isinstance(run_out, dict) else None
+            tr = run_out.get("trace")
             if isinstance(tr, dict) and isinstance(tr.get("usageTotal"), dict):
                 usage = tr.get("usageTotal")
             last_text = tr.get("lastText") if isinstance(tr, dict) and isinstance(tr.get("lastText"), str) else ""
 
             judged_obj = _json_first_object(last_text)
             if isinstance(judged_obj, dict) and isinstance(judged_obj.get("rubrics"), list):
-                candidate_rows = _normalize_rubric_rows(
-                    judged_obj.get("rubrics"),
-                    rubrics,
-                )
-                if len(candidate_rows) == len(rubrics):
-                    rows = candidate_rows
-                    err = (
-                        ""
-                        if run_out.get("status") == "ok"
-                        else str(run_out.get("errorMessage") or "")[:2000]
-                    )
-                    break
-                rows = candidate_rows
+                rows = _normalize_rubric_rows(judged_obj["rubrics"], rubrics)
+
+            if run_out.get("status") != "ok":
+                err = str(
+                    run_out.get("errorMessage")
+                    or f"Judge runner failed with status {run_out.get('status') or 'unknown'}"
+                )[:2000]
+            elif not isinstance(judged_obj, dict) or not isinstance(judged_obj.get("rubrics"), list):
+                err = "Judge output parse failed"
+            elif len(rows) != len(rubrics) or len(judged_obj["rubrics"]) != len(rubrics):
                 err = (
                     "Judge returned "
-                    f"{len(candidate_rows)} of {len(rubrics)} configured "
-                    "rubric rows."
+                    f"{len(rows)} of {len(rubrics)} configured valid rubric rows "
+                    f"({len(judged_obj['rubrics'])} response entries)."
                 )
 
             if not err:
-                err = str(
-                    run_out.get("errorMessage")
-                    or "Judge output parse failed"
-                )[:2000]
+                break
             if tries >= max_retries:
                 break
 
             # Backoff a bit to reduce rate-limit failures.
             time.sleep(min(60, 2 ** (tries - 1) + random.random()))
 
-        if not rows:
-            for i, r in enumerate(rubrics):
-                if not isinstance(r, str):
-                    continue
-                rows.append({"index": i, "rubric": r, "passed": False, "confidence": 0.0, "evidence": f"ClaudeCode judge failed: {err}"})
-        elif len(rows) != len(rubrics):
-            rows = _complete_rubric_rows(rows, rubrics, error=err)
-
         passed_n = len([x for x in rows if isinstance(x, dict) and x.get("passed") is True])
         failed_n = len(rows) - passed_n
+        summary = {"total": len(rows), "passed": passed_n, "failed": failed_n} if not err else None
+        judge_status = "error" if err else "ok"
 
         _write_json(
             rubrics_out_path,
@@ -760,12 +738,14 @@ def evaluate_task(
                 "taskId": task_id,
                 "agentKind": kind,
                 "createdAt": _iso_now(),
+                "status": judge_status,
                 "rubrics": sorted(
                     rows,
                     key=lambda x: int(x.get("index")) if isinstance(x, dict) and isinstance(x.get("index"), int) else 10**9,
                 ),
-                "summary": {"total": len(rows), "passed": passed_n, "failed": failed_n},
+                "summary": summary,
                 "judge": {
+                    "status": judge_status,
                     "model": model,
                     "modelName": model_name,
                     "baseUrl": base_url,
@@ -788,7 +768,9 @@ def evaluate_task(
             },
         )
         result["rubricsPath"] = rubrics_out_path
-        result["rubricsSummary"] = {"total": len(rows), "passed": passed_n, "failed": failed_n}
+        result["rubricsSummary"] = summary
+        if err:
+            result.update({"success": False, "error": err})
 
     if not overwrite and os.path.exists(dep_graph_out_path):
         result["depGraphSkipped"] = True
@@ -839,7 +821,7 @@ def _select_task_dirs(task_dir: str) -> List[str]:
     return task_dirs or [task_dir]
 
 
-if __name__ == "__main__":
+def main(argv: Optional[List[str]] = None) -> int:
     p = argparse.ArgumentParser(description="Evaluate task(s) using ClaudeCode agent-as-a-judge")
     p.add_argument("--task-dir", required=True, help="Path to task execution result directory or runs root")
     p.add_argument("--eval-yaml", required=True, help="Path to eval YAML (baseUrl/model/apiKey/model_name)")
@@ -850,13 +832,21 @@ if __name__ == "__main__":
     p.add_argument("--max-str-len", type=int, default=2000)
     p.add_argument("--max-trace-items", type=int, default=30)
     p.add_argument("--max-output-files", type=int, default=10)
-    args = p.parse_args()
+    args = p.parse_args(argv)
 
     # Prefer the requested directory itself when it is already one task case.
     # Strict runs retain a manifest-only ``input_source/metadata.json`` beneath
     # the case; enumerating children first would mistake that snapshot for the
     # candidate case and skip evaluation because it has no output directory.
     task_dirs = _select_task_dirs(args.task_dir)
+    failures: List[str] = []
+
+    def record_result(td: str, result: Json) -> None:
+        if isinstance(result, dict) and result.get("success") is True:
+            return
+        error = result.get("error") if isinstance(result, dict) else "Invalid judge result"
+        failures.append(td)
+        print(f"Judge failed for {td}: {error or 'Unknown judge failure'}", file=sys.stderr)
 
     if args.parallel and len(task_dirs) > 1:
         max_workers = min(args.workers, len(task_dirs))
@@ -876,21 +866,32 @@ if __name__ == "__main__":
                     for td in task_dirs
                 }
                 for fut in as_completed(futures):
-                    _ = fut.result()
+                    try:
+                        result = fut.result()
+                    except Exception as exc:
+                        result = {"success": False, "error": f"{type(exc).__name__}: {exc}"}
+                    record_result(futures[fut], result)
                     pbar.update(1)
-                    # print(json.dumps(_, ensure_ascii=False, indent=2))
     else:
         for td in tqdm(task_dirs, desc="Evaluating tasks"):
-            _ = evaluate_task(
-                task_dir=td,
-                eval_yaml_path=args.eval_yaml,
-                overwrite=args.overwrite,
-                max_retries=args.max_retries,
-                max_str_len=args.max_str_len,
-                max_trace_items=args.max_trace_items,
-                max_output_files=args.max_output_files,
-            )
-            # print(json.dumps(_, ensure_ascii=False, indent=2))
+            try:
+                result = evaluate_task(
+                    task_dir=td,
+                    eval_yaml_path=args.eval_yaml,
+                    overwrite=args.overwrite,
+                    max_retries=args.max_retries,
+                    max_str_len=args.max_str_len,
+                    max_trace_items=args.max_trace_items,
+                    max_output_files=args.max_output_files,
+                )
+            except Exception as exc:
+                result = {"success": False, "error": f"{type(exc).__name__}: {exc}"}
+            record_result(td, result)
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
 
 """
 uv run --project evaluation --frozen python evaluation/src/agent_as_a_judge.py \

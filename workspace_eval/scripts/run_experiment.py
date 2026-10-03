@@ -42,6 +42,7 @@ REPO_ROOT = EVAL_ROOT.parent
 if str(EVAL_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(EVAL_ROOT / "src"))
 import runtime_backends  # noqa: E402  —— 运行后端注册表（内置 local，其余走插件）
+from judge_results import is_valid_judge_result  # noqa: E402
 EXPECTED_IMAGE = "workspace-bench:local"
 DEFAULT_IMAGE_ID = (
     "sha256:b32758de8da63061a4db4ecd7f31669797992d9552e757b99c498ff0a36a6046"
@@ -133,6 +134,8 @@ condition: noise
 
 agent:
   model: gpt-5.6-sol
+  # 内置 local runner 支持 Codex 或 ClaudeCode。
+  harness: Codex
   reasoning_effort: max
   timeout_seconds: 7200
   max_output_tokens: 32768
@@ -557,8 +560,9 @@ def _model_config(raw: object, *, default_effort: str) -> dict[str, Json]:
         "auth_provider": "auth_provider",
     }
     for source_key, target_key in aliases.items():
-        if raw.get(source_key) is not None:
-            preset[target_key] = raw[source_key]
+        value = raw.get(source_key)
+        if value is not None and not (isinstance(value, str) and not value.strip()):
+            preset[target_key] = value
 
     effort = str(raw.get("reasoning_effort") or default_effort).strip().lower()
     if effort not in REASONING_EFFORTS:
@@ -605,7 +609,9 @@ def _model_config(raw: object, *, default_effort: str) -> dict[str, Json]:
             or preset["upstream_timeout_seconds"]
         ),
     )
-    api_key_env = str(raw.get("api_key_env") or "OPENAI_API_KEY").strip()
+    api_key_env = str(
+        raw.get("api_key_env") or preset.get("api_key_env") or "OPENAI_API_KEY"
+    ).strip()
     if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", api_key_env):
         raise SystemExit(f"invalid api_key_env: {api_key_env!r}")
     preset["api_key_env"] = api_key_env
@@ -615,6 +621,24 @@ def _model_config(raw: object, *, default_effort: str) -> dict[str, Json]:
             "use api_key_env and runtime.env_file"
         )
     return preset
+
+
+def _agent_harness(config: dict[str, Json]) -> str:
+    agent = config.get("agent")
+    raw = agent.get("harness") if isinstance(agent, dict) else None
+    raw = raw or config.get("harness") or "Codex"
+    aliases = {
+        "codex": "Codex",
+        "claudecode": "ClaudeCode",
+        "claude-code": "ClaudeCode",
+        "claude_code": "ClaudeCode",
+    }
+    selected = aliases.get(str(raw).strip().lower())
+    if selected is None:
+        raise SystemExit(
+            f"unsupported local agent harness: {raw!r}; choose Codex or ClaudeCode"
+        )
+    return selected
 
 
 def _api_provider(model: dict[str, Json]) -> dict[str, Json]:
@@ -1099,6 +1123,7 @@ def _write_case_configs(
     runtime_raw = prepared.config["runtime"]
     assert isinstance(agent_raw, dict) and isinstance(runtime_raw, dict)
     agent = _model_config(agent_raw, default_effort="max")
+    harness = _agent_harness(prepared.config)
     resources = runtime_raw.get("resources") or {}
     if not isinstance(resources, dict):
         raise SystemExit("runtime.resources must be a mapping")
@@ -1134,7 +1159,7 @@ def _write_case_configs(
             f"{case.case_id}-{condition}-{_safe_slug(display_with_effort)}"
         )
         run_config = {
-            "agent_name": "Codex",
+            "agent_name": harness,
             "model_name": display_with_effort,
             "run_name": run_name,
             "task_path": str(prepared.runtime_task_root),
@@ -1194,6 +1219,7 @@ def _prepare(config_path: Path) -> PreparedRun:
                 "(curate_workspace.py output) for task(s): " + ", ".join(missing)
             )
     _model_config(config.get("agent"), default_effort="max")
+    _agent_harness(config)
     judge_raw = config.get("judge")
     judge = _model_config(judge_raw, default_effort="medium")
     assert isinstance(judge_raw, dict)
@@ -1312,6 +1338,7 @@ def _prepare(config_path: Path) -> PreparedRun:
         "agent": _safe_model_manifest(
             _model_config(config["agent"], default_effort="max")
         ),
+        "agent_harness": _agent_harness(config),
         "judge": _safe_model_manifest(judge),
         "image": image,
         "image_id": image_id,
@@ -1474,6 +1501,14 @@ def _judge_command(
     for key in sorted(provider_environment):
         if key in os.environ:
             command.extend(["-e", key])
+    # Keep image-installed SDK dependencies visible on a fresh checkout.
+    # Docker's -v creates missing host paths as empty directories, hiding the
+    # image's node_modules; only mount an actual local dependency tree.
+    node_modules = prepared.runtime_eval_root / "node_modules"
+    if node_modules.is_dir():
+        command.extend(
+            ["-v", f"{node_modules}:/workspace/Workspace-Bench/evaluation/node_modules:ro"]
+        )
     command.extend(
         [
             "-e",
@@ -1489,11 +1524,6 @@ def _judge_command(
             (
                 f"{prepared.runtime_eval_root / 'baselines'}:"
                 "/workspace/Workspace-Bench/evaluation/baselines:ro"
-            ),
-            "-v",
-            (
-                f"{prepared.runtime_eval_root / 'node_modules'}:"
-                "/workspace/Workspace-Bench/evaluation/node_modules:ro"
             ),
             "-v",
             f"{prepared.judge_config_path}:/workspace/strict/judge.yaml:ro",
@@ -1678,10 +1708,9 @@ def _run_case_with_updates(
             candidates = sorted(judge_case.glob("rubrics_judge--*.json"))
             if candidates:
                 value = _read_json(candidates[-1])
-                summary = value.get("summary")
                 if (
-                    isinstance(summary, dict)
-                    and int(summary.get("total") or -1) == expected_total
+                    result.returncode == 0
+                    and is_valid_judge_result(value, expected_total)
                 ):
                     judge_result = candidates[-1]
                     break
@@ -1985,6 +2014,7 @@ def main() -> int:
                 "(curate_workspace.py output) for task(s): " + ", ".join(missing)
             )
     _model_config(config.get("agent"), default_effort="max")
+    _agent_harness(config)
     _model_config(config.get("judge"), default_effort="medium")
     if args.validate_only:
         print(

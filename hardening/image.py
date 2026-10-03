@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 
 from pathlib import Path
 
@@ -57,7 +58,7 @@ def ensure_task_image(
         raise FileNotFoundError(f"题目环境 Dockerfile 不存在：{src / 'environment/Dockerfile'}")
 
     gen = _run(
-        ["python3", str(C.RUNTIME / "make-task-image.py"),
+        [sys.executable, str(C.RUNTIME / "make-task-image.py"),
          "--task-dir", str(src), "--name", display],
         timeout=600, cwd=C.HERE,
     )

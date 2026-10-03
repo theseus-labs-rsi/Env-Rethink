@@ -15,6 +15,7 @@ services:
     environment:
       WORKSPACE_BENCH_ROOT: /workspace/Workspace-Bench
       WORKSPACE_BENCH_EVAL_ROOT: /workspace/Workspace-Bench/evaluation
+      WORKSPACE_BENCH_NODE_MODULES: /opt/workspace-bench/evaluation-node/node_modules
       RIP_BENCH_ROOT: /workspace/Workspace-Bench
       RIP_BENCH_EVAL_ROOT: /workspace/Workspace-Bench/evaluation
       CODEX_SANDBOX_MODE: danger-full-access
@@ -61,6 +62,7 @@ services:
     environment:
       WORKSPACE_BENCH_ROOT: /workspace/Workspace-Bench
       WORKSPACE_BENCH_EVAL_ROOT: /workspace/Workspace-Bench/evaluation
+      WORKSPACE_BENCH_NODE_MODULES: /opt/workspace-bench/evaluation-node/node_modules
       RIP_BENCH_ROOT: /workspace/Workspace-Bench
       RIP_BENCH_EVAL_ROOT: /workspace/Workspace-Bench/evaluation
       CODEX_SANDBOX_MODE: workspace-write

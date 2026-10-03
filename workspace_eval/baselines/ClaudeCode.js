@@ -20,7 +20,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { query } from '../../evaluation/node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs';
+import { createRequire } from 'module';
 import { fileURLToPath, pathToFileURL } from 'url';
 
 // ─── CLI Argument Parsing ─────────────────────────────────────────────────────
@@ -113,11 +113,26 @@ function buildEnv(customProvider) {
   return env;
 }
 
-// ─── Claude Code CLI Path ─────────────────────────────────────────────────────
+// ─── Claude Agent SDK and CLI Paths ───────────────────────────────────────────
 
-function getClaudeCodePath() {
+async function loadClaudeSdk() {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  return path.join(here, '../../evaluation/node_modules/@anthropic-ai/claude-agent-sdk/cli.js');
+  const roots = [];
+  const modulesDir = process.env.WORKSPACE_BENCH_NODE_MODULES?.trim();
+  if (modulesDir) roots.push(path.resolve(modulesDir, '@anthropic-ai/claude-agent-sdk'));
+  roots.push(path.resolve(here, '../node_modules/@anthropic-ai/claude-agent-sdk'));
+  try {
+    const require = createRequire(import.meta.url);
+    roots.push(path.dirname(require.resolve('@anthropic-ai/claude-agent-sdk')));
+  } catch (_) { /* The SDK may only be available in the image's modules directory. */ }
+  const sdkRoot = roots.find((root) =>
+    fs.existsSync(path.join(root, 'sdk.mjs')) && fs.existsSync(path.join(root, 'cli.js'))
+  );
+  if (!sdkRoot) {
+    throw new Error('Claude Agent SDK not found; install the evaluation Node dependencies or set WORKSPACE_BENCH_NODE_MODULES.');
+  }
+  const { query } = await import(pathToFileURL(path.join(sdkRoot, 'sdk.mjs')).href);
+  return { query, cliPath: path.join(sdkRoot, 'cli.js') };
 }
 
 // ─── Color Helpers (ANSI) ─────────────────────────────────────────────────────
@@ -270,6 +285,7 @@ async function _runTaskImpl(task, opts, startedAt, startMs) {
   let status = 'failed';
   let exitCode = 1;
   let errorMessage = null;
+  let sawResult = false;
 
   const log = (...args) => {
     if (opts.verbose) process.stderr.write(`  ${args.join(' ')}\n`);
@@ -277,6 +293,11 @@ async function _runTaskImpl(task, opts, startedAt, startMs) {
 
   const env = buildEnv(task.customProvider);
   if (task.cwd) env.HOME = task.cwd;
+  const cwdRoot = path.resolve(task.cwd ?? process.cwd());
+  const scratchDir = fs.mkdtempSync(path.join(cwdRoot, '.claude-scratch-'));
+  env.TMPDIR = scratchDir;
+  env.TMP = scratchDir;
+  env.TEMP = scratchDir;
   // Task execution changes HOME to a disposable work directory. Preserve the
   // image-installed skill source through an explicit config root instead of
   // letting Claude Code discover an empty task-local ~/.claude directory.
@@ -292,12 +313,12 @@ async function _runTaskImpl(task, opts, startedAt, startMs) {
   // timeout: -1 means no limit
   const timeoutHandle = timeoutSec === -1 ? null : setTimeout(() => {
     status = 'timeout';
+    exitCode = 124;
     log(`${c.yellow}[timeout]${c.reset} after ${timeoutSec}s`);
     abortController.abort();
   }, timeoutSec * 1000);
 
   try {
-    const cwdRoot = path.resolve(task.cwd ?? process.cwd());
     const isUnderCwd = (p) => {
       if (typeof p !== 'string' || !p.trim()) return false;
       const abs = path.isAbsolute(p) ? path.resolve(p) : path.resolve(cwdRoot, p);
@@ -312,18 +333,24 @@ async function _runTaskImpl(task, opts, startedAt, startMs) {
       for (const m of s.matchAll(re)) {
         const p = m[2];
         if (allowed.some((pre) => p === pre.slice(0, -1) || p.startsWith(pre))) continue;
+        // Permit the image's document-parsing interpreter as the executable,
+        // without allowing reads/writes elsewhere in /opt or external outputs.
+        if (/^\s*$/.test(s.slice(0, m.index)) &&
+            ['/opt/workspace-bench/evaluation-venv/bin/python',
+             '/opt/workspace-bench/evaluation-venv/bin/python3'].includes(p)) continue;
         if (!isUnderCwd(p)) return false;
       }
       return true;
     };
 
+    const { query, cliPath } = await loadClaudeSdk();
     const q = query({
       prompt: task.prompt,
       options: {
         cwd: task.cwd ?? process.cwd(),
         abortController,
         env,
-        pathToClaudeCodeExecutable: getClaudeCodePath(),
+        pathToClaudeCodeExecutable: cliPath,
         permissionMode: 'default',
         // Streaming partial events can be very verbose but do not provide
         // additional execution capability to this batch runner.  Keep them
@@ -447,9 +474,18 @@ async function _runTaskImpl(task, opts, startedAt, startMs) {
 
       // ── 2. Result message (task finished / error) ─────────────────────────
       if (msg.type === 'result') {
+        sawResult = true;
         if (status !== 'timeout') {
-          status = msg.subtype === 'success' ? 'passed' : 'failed';
-          exitCode = msg.subtype === 'success' ? 0 : 1;
+          const succeeded = msg.subtype === 'success' && msg.is_error !== true;
+          status = succeeded ? 'passed' : 'failed';
+          exitCode = succeeded ? 0 : 1;
+          if (!succeeded) {
+            const errors = Array.isArray(msg.errors)
+              ? msg.errors.map((error) => typeof error === 'string' ? error : JSON.stringify(error)).join('\n')
+              : '';
+            errorMessage = errors || (typeof msg.result === 'string' && msg.result.trim())
+              || `Claude Code returned ${msg.subtype || 'an error result'}`;
+          }
         }
         log(`${statusColor(status)}[result]${c.reset} ${status}`);
         stdoutLines.push(JSON.stringify({
@@ -699,10 +735,10 @@ async function _runTaskImpl(task, opts, startedAt, startMs) {
       }));
     }
 
-    // If no explicit result message was received but no error, treat as passed
-    if (status === 'failed' && !errorMessage && messageCount > 0) {
-      status = 'passed';
-      exitCode = 0;
+    if (!sawResult && status !== 'timeout') {
+      status = 'failed';
+      exitCode = 1;
+      errorMessage = 'Claude Code stream ended without a terminal result';
     }
 
   } catch (err) {
@@ -714,6 +750,11 @@ async function _runTaskImpl(task, opts, startedAt, startMs) {
     log(`${c.red}[error]${c.reset} ${errorMessage}`);
   } finally {
     if (timeoutHandle !== null) clearTimeout(timeoutHandle);
+    try {
+      fs.rmSync(scratchDir, { recursive: true, force: true });
+    } catch (err) {
+      log(`${c.yellow}[warn]${c.reset} failed to remove task scratch directory: ${err.message}`);
+    }
   }
 
   // Normalize any still-running tool calls at end of task

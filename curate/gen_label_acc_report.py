@@ -67,7 +67,10 @@ def compute(cur, gt):
             if x is None:
                 continue
             gstd = g["partition"] == "standard"
-            pick = x.get("pred_partition") == "standard"
+            pred_partition = x.get("pred_partition")
+            if pred_partition not in ("standard", "noise") and "selected" in x:
+                pred_partition = "standard" if x["selected"] else "noise"
+            pick = pred_partition == "standard"
             if gstd and pick: tp += 1
             elif gstd: fn += 1
             elif pick: fp += 1
@@ -78,7 +81,7 @@ def compute(cur, gt):
                 if g.get("stage"):
                     ss[1] += 1; ss[0] += (ps == g["stage"])
             ff[1] += 1
-            ff[0] += ((x.get("pred_partition") == g["partition"])
+            ff[0] += ((pred_partition == g["partition"])
                       and (gstd or pc == g["category"])
                       and (not g.get("stage") or ps == g["stage"]))
         for k, v in (("p", [tp + tn, tp + fn + fp + tn]), ("c", cc), ("s", ss), ("f", ff)):

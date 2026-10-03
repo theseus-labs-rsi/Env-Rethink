@@ -60,7 +60,8 @@ export ENV_RETHINK_QWEN_API_KEY=...
 ```
 
 也可以逐次用 `--base-url` / `--model-id` / `--model-name` 覆盖。
-`curate/.env`（gitignore）里的同名键会被 `run` 读取。
+`prepare` 和 `run` 都读取 `curate/.env`（gitignore）里的同名键，进程环境变量优先。
+生成的 `runtime.env_file` 指向该文件，供 runner 加载模型凭据；未设置 `MODEL_ID` 时使用对应的 `MODEL`。
 
 ## 实验在哪跑
 
