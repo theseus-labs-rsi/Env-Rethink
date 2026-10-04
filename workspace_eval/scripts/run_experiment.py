@@ -627,16 +627,21 @@ def _agent_harness(config: dict[str, Json]) -> str:
     agent = config.get("agent")
     raw = agent.get("harness") if isinstance(agent, dict) else None
     raw = raw or config.get("harness") or "Codex"
+    # agentkit 不是"另起一个 harness"，而是把共享的 agentkit/ 运行时接进 harness
+    # 契约（src/agents/agentkit.py）：每个 case 一个干净容器，镜像 = 基础镜像 +
+    # agent 层。它的 agent_name 必须原样传下去，_load_agent_run 按文件名加载。
     aliases = {
         "codex": "Codex",
         "claudecode": "ClaudeCode",
         "claude-code": "ClaudeCode",
         "claude_code": "ClaudeCode",
+        "agentkit": "agentkit",
     }
     selected = aliases.get(str(raw).strip().lower())
     if selected is None:
         raise SystemExit(
-            f"unsupported local agent harness: {raw!r}; choose Codex or ClaudeCode"
+            f"unsupported local agent harness: {raw!r}; "
+            "choose Codex, ClaudeCode or agentkit"
         )
     return selected
 

@@ -44,7 +44,7 @@ def overlay_image_name(name: str, tag: str = AGENT_BASE_TAG) -> str:
 
 OVERLAY_DOCKERFILE = """# 由 agentkit/images.py 生成：目标镜像 + agent 层
 ARG TASK_IMAGE
-FROM ${TASK_IMAGE}
+FROM ${{TASK_IMAGE}}
 ARG AGENT_BASE_IMAGE
 COPY --from={agent_base} /opt/tb-agent /opt/tb-agent
 ENV PATH=/opt/tb-agent/node/bin:$PATH \\

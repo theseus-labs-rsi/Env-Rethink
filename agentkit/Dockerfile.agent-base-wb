@@ -1,0 +1,81 @@
+# Workspace-Bench 专用 agent 基座。
+#
+# 为什么不复用同目录的 Dockerfile.agent-base：那个基座的父镜像默认是
+# wb-tb-base:20260916，而它现在解析到 Debian 13 (trixie) / glibc 2.41；
+# Workspace-Bench 的题目镜像是 node:24-bookworm-slim（Debian 12 / glibc 2.36）。
+# overlay 是 `COPY --from=<基座> /opt/tb-agent /opt/tb-agent` 的纯文件复制，
+# trixie 上产出的二进制叠到 bookworm 上会报 "GLIBC_2.4x not found"。
+# Dockerfile.agent-base 的注释假定「题目镜像也 FROM wb-tb-base」——本仓库的
+# Workspace-Bench 镜像不是，所以这里单起一条同源于题目镜像的基座。
+#
+# 构建基座：
+#   docker build -f agentkit/Dockerfile.agent-base-wb \
+#     -t tb-agent-base:20260916-wb agentkit/
+#
+# 叠加到题目镜像（等价于 agentkit 的 build_overlay，只是换了这个基座）：
+#   docker build -f <overlay.Dockerfile> \
+#     --build-arg TASK_IMAGE=workspace-bench:local \
+#     --build-arg AGENT_BASE_IMAGE=tb-agent-base:20260916-wb \
+#     -t tb-agent-wseval:20260916-wb agentkit/
+#
+# 构建参数与 Dockerfile.agent-base 保持同名，便于对照。
+
+ARG TB_AGENT_BASE_FROM=node:24-bookworm-slim
+FROM ${TB_AGENT_BASE_FROM}
+
+ARG CLAUDE_CODE_VERSION=2.1.187
+ARG CODEX_VERSION=0.157.0
+ARG NPM_REGISTRY=https://registry.npmjs.org/
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# wb-tb-base 里由 apt 提供的东西，这里按 bookworm 的版本重装一遍。
+# python3 是 gwshim.py（网关整形代理）要的；node 由父镜像自带。
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ripgrep \
+        less \
+        unzip \
+        python3 \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── agent 运行时集中放在 /opt/tb-agent ─────────────────────────────────
+ENV TB_AGENT_HOME=/opt/tb-agent \
+    NPM_CONFIG_REGISTRY=${NPM_REGISTRY} \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_AUDIT=false
+
+RUN mkdir -p /opt/tb-agent/node /opt/tb-agent/codex-home /opt/tb-agent/cache
+
+RUN npm install --global --prefix /opt/tb-agent/node \
+        "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" \
+        "@openai/codex@${CODEX_VERSION}" \
+    && /opt/tb-agent/node/bin/claude --version \
+    && /opt/tb-agent/node/bin/codex --version
+
+# codex 的家目录：装完就固定在这儿，运行时用 CODEX_HOME 指过来（避免污染 ~/.codex）
+ENV CODEX_HOME=/opt/tb-agent/codex-home
+
+# ── 运行时开关（与 Dockerfile.agent-base 一致）────────────────────────
+# IS_SANDBOX=1：claude code 2.x 拒绝 root 下用 --dangerously-skip-permissions，
+#   除非它认为自己在沙箱里。题目镜像默认 root，agent 又必须全自动。
+# CODEX_SANDBOX_MODE：容器内直接用 danger-full-access。
+ENV IS_SANDBOX=1 \
+    CODEX_SANDBOX_MODE=danger-full-access \
+    PATH=/opt/tb-agent/node/bin:${PATH}
+
+COPY tb_agent_env.sh gwshim.py /opt/tb-agent/
+RUN chmod +x /opt/tb-agent/tb_agent_env.sh
+
+# 自检：两个 CLI 都在 PATH 上、能非交互式起来，并打印 glibc 版本供与题目镜像比对。
+RUN set -e; \
+    echo -n "  claude: "; command -v claude && claude --version; \
+    echo -n "  codex:  "; command -v codex && codex --version; \
+    echo -n "  rg:     "; command -v rg; \
+    echo -n "  网关整形代理: "; python3 /opt/tb-agent/gwshim.py --help >/dev/null && echo OK; \
+    echo -n "  CODEX_HOME: "; test -d "$CODEX_HOME" && echo "$CODEX_HOME"; \
+    echo -n "  glibc:  "; ldd --version | head -1; \
+    echo -n "  debian: "; cat /etc/debian_version
+
+CMD ["sleep", "infinity"]

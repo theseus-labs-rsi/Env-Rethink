@@ -19,6 +19,7 @@ LANGUAGE_ALIASES = {
 DATASETS = {
     "lite": ("Workspace-Bench/Workspace-Bench-Lite", "tasks_lite"),
     "full": ("Workspace-Bench/Workspace-Bench", "tasks"),
+    "hard": ("Workspace-Bench/Workspace-Bench-Hard", "tasks_hard"),
     "workspaces": ("Workspace-Bench/Workspace-Bench-Workspaces", "filesys"),
 }
 
@@ -30,6 +31,11 @@ TASK_LAYOUTS = {
     "full": {
         "en": ("task_clean_en", "task_en_metadata_table.csv"),
         "cn": ("task_clean_cn", "task_clean_cn_metadata_table.csv"),
+    },
+    # hard 目前只发布中文语料，所以只有 cn 一套。en 不在表里 —— 显式请求会给出
+    # 可读报错，而不是 KeyError（见 download_tasks）。
+    "hard": {
+        "cn": ("task_hard_cn", "task_hard_cn_metadata_table.csv"),
     },
 }
 
@@ -480,7 +486,12 @@ def download_tasks(
     language: str,
 ) -> None:
     repo_id, dirname = DATASETS[kind]
-    task_dirname, metadata_csv = TASK_LAYOUTS[kind][language]
+    layouts = TASK_LAYOUTS[kind]
+    if language not in layouts:
+        raise SystemExit(
+            f"{kind} 没有 {language} 语料；已发布的语言：{', '.join(sorted(layouts))}"
+        )
+    task_dirname, metadata_csv = layouts[language]
     dst = eval_root / dirname
     tmp = eval_root / ".generated" / "hf_downloads" / f"{kind}_{language}"
     _ensure_language_compatible(dst, language, force, f"{kind} tasks")
@@ -552,6 +563,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Download Workspace-Bench assets from Hugging Face.")
     parser.add_argument("--lite", action="store_true", help="Download/materialize Workspace-Bench-Lite tasks.")
     parser.add_argument("--full", action="store_true", help="Download/materialize full Workspace-Bench tasks.")
+    parser.add_argument("--hard", action="store_true", help="Download/materialize Workspace-Bench-Hard tasks.")
     parser.add_argument("--workspaces", action="store_true", help="Download workspace filesystem assets.")
     parser.add_argument("--all", action="store_true", help="Download all task and workspace assets.")
     parser.add_argument(
@@ -585,10 +597,22 @@ def main() -> None:
         download_tasks("lite", eval_root, args.revision, args.force, args.max_workers, language)
     if args.all or args.full:
         download_tasks("full", eval_root, args.revision, args.force, args.max_workers, language)
+    # hard 只有 cn。显式 --hard --language en 报错（download_tasks 里给出可用语言），
+    # 而 --all 只是跳过并说明 —— 全量下载不该因为一个语料没有该语言就整体失败。
+    if args.hard:
+        download_tasks("hard", eval_root, args.revision, args.force, args.max_workers, language)
+    elif args.all:
+        if language in TASK_LAYOUTS["hard"]:
+            download_tasks("hard", eval_root, args.revision, args.force, args.max_workers, language)
+        else:
+            print(
+                f"[skip] Workspace-Bench-Hard 没有 {language} 语料；"
+                f"已发布的语言：{', '.join(sorted(TASK_LAYOUTS['hard']))}"
+            )
     if args.all or args.workspaces:
         download_workspaces(eval_root, args.revision, args.force, language)
-    if not (args.all or args.lite or args.full or args.workspaces):
-        parser.error("choose at least one of --lite, --full, --workspaces, or --all")
+    if not (args.all or args.lite or args.full or args.hard or args.workspaces):
+        parser.error("choose at least one of --lite, --full, --hard, --workspaces, or --all")
 
 
 if __name__ == "__main__":

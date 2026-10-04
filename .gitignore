@@ -30,6 +30,16 @@ curate/experiments/
 */runs/
 */output/
 
+# ── 本地语料与发布素材（体积大，不进仓库）─────────────────────────
+# 数据集在 HuggingFace 上，用 download_hf_assets.py 取；本地副本不该入 git。
+# data/ 下放的是任务拷件、数据集 README/CSV 暂存、以及内部变更日志。
+data/
+# download_hf_assets.py 的落盘位置（<eval_root>/<dirname>）：tasks_lite / tasks /
+# tasks_hard / filesys。按空间大小不入库。
+workspace_eval/tasks/
+workspace_eval/tasks_*/
+workspace_eval/filesys/
+
 # ── curate/:只排除红队样本生成器 ───────────────────────────────────
 # 该脚本整体服务于一条内部研究线,不进开源树(本地保留)。
 curate/gen_consensus_attack_tasks.py
