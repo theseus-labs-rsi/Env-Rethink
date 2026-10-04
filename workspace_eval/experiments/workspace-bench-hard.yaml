@@ -1,0 +1,138 @@
+# Workspace-Bench-Hard：本地 Docker + agentkit harness
+#
+# 这是一个可直接照抄的模板 —— 端点、凭据都不写死在文件里，全部经环境变量注入
+# （见 workspace_eval/.env.example，本文件用到的三个变量在下面注明）。
+#
+# 前置：
+#   1) 取任务集（落盘到 task_dir 指向的位置）
+#        python3 workspace_eval/scripts/download_hf_assets.py --hard --language cn \
+#            --eval-root workspace_eval
+#      download_hf_assets.py 以 <eval_root>/runs 是否存在判定「评测根」，
+#      所以先确保 workspace_eval/runs/ 存在。
+#   2) 准备 agent 运行时镜像（每个 case 起一个干净容器跑 agent）
+#        python3 agentkit/build_wb_agent_image.py
+#      产物名写进 .env 的 WS_AGENT_IMAGE。
+#   3) 在 workspace_eval/.env 里填端点与凭据（该文件在 .gitignore 里）。
+#   4) 把 runtime.expected_image_id 换成你本地的实际值：
+#        docker image inspect workspace-bench:local --format='{{.Id}}'
+#
+# 运行：
+#   python3 workspace_eval/scripts/run_experiment.py --config <本文件>
+# 只校验不跑容器：
+#   python3 workspace_eval/scripts/run_experiment.py --config <本文件> --validate-only
+version: 1
+name: workspace-bench-hard
+
+# 相对路径按仓库根解析，也可以填绝对路径。
+task_dir: workspace_eval/tasks_hard
+
+# 数据集的全部 30 个任务。重复的 id 会成为独立 case（本文件无重复）。
+task_ids:
+  - 72
+  - 75
+  - 78
+  - 79
+  - 85
+  - 87
+  - 94
+  - 100
+  - 108
+  - 124
+  - 129
+  - 146
+  - 154
+  - 159
+  - 160
+  - 161
+  - 171
+  - 207
+  - 258
+  - 266
+  - 267
+  - 288
+  - 291
+  - 300
+  - 314
+  - 334
+  - 357
+  - 359
+  - 372
+  - 374
+
+repeat: 1
+parallelism: 3
+
+# task_files：空角色工作区 + manifest 原样全量输入。
+# 本数据集每个任务自带的 distractor 文件（input_role: noise）都在 manifest 里，
+# 照旧物化；不碰角色工作区快照，所以既不需要 filesys/*_raw，也不需要角色镜像。
+#
+# 注意：不要写成 noise —— 那个条件走 ROLE_WORKSPACE_CONDITIONS 分支
+# （run_experiment.py:69），会强制要求 runtime.role_sources 存在，否则启动即报错。
+condition: task_files
+
+agent:
+  # agentkit harness：每个 case 起一个干净容器，镜像 = WS_AGENT_IMAGE。
+  # 见 workspace_eval/src/agents/agentkit.py。
+  harness: agentkit
+
+  # 模型按需替换。下面几项之所以要显式给全：非内置 preset 的模型不会自动带上
+  # 端点与协议，缺项会落到默认的 ${OPENAI_BASE_URL} / bearer 上。
+  model: deepseek-v4.1-flash
+  # 网关侧 marker（preset 别名之外的真实模型名）
+  model_id: deepseek-flash
+  # 端点不写死在这里 —— 见 .env 的 WS_AGENT_BASE_URL。
+  base_url: ${WS_AGENT_BASE_URL:-}
+  # provider_type=anthropic 会让 agentkit 推成 claude_code kind
+  # （agentkit.py:_pick_kind），协议走 Anthropic Messages。
+  provider_type: anthropic
+  wire_api: anthropic_messages
+  # 纯 bearer key，不是 APP_ID:APP_KEY 那套。端点与 key 都在 .env 里。
+  auth_type: api_key
+  api_key_env: WS_AGENT_API_KEY
+
+  reasoning_effort: max
+  timeout_seconds: 7200
+  max_output_tokens: 32768
+  attempts: 2
+
+judge:
+  model: gemini-3.7-flash
+  # 预设里 gemini-3.7-flash 默认是 anthropic_app_credentials（APP_ID:APP_KEY 那套），
+  # 这里显式覆盖成纯 key，端点同样从 .env 取。
+  base_url: ${WS_JUDGE_BASE_URL:-}
+  provider_type: anthropic
+  # Gemini 走 Anthropic Messages：预设注释与实测都表明 Responses 路径会丢
+  # function_call_output，判分器会反复重发同一个调用。
+  wire_api: anthropic_messages
+  auth_type: api_key
+  api_key_env: WS_JUDGE_API_KEY
+
+  reasoning_effort: max
+  timeout_seconds: 1800
+  max_output_tokens: 32768
+  attempts: 3
+  max_retries: 2
+  max_string_length: 8000
+  max_trace_items: 60
+  max_output_files: 10
+
+runtime:
+  # 不写 provider 或写 local 都走仓库内置的本地 Docker 后端；
+  # 平台侧后端由插件提供（见 runtime_backends/__init__.py），本模板不用。
+  provider: local
+  local_root: /tmp
+  persistent_root: workspace_eval/experiments
+  env_file: workspace_eval/.env
+  keep_local_runtime: true
+  minimum_free_gb: 10
+
+  image: workspace-bench:local
+  # 本地实际镜像 ID（docker image inspect workspace-bench:local --format='{{.Id}}'）。
+  # run_experiment.py:1246 是硬校验，与实际不符直接退出 —— 换机器务必改这里。
+  expected_image_id: sha256:7217b22d2f2cade720cbab14db278d83a50bcb44f05103560f376d8cee3e92ac
+
+  resources:
+    cpus: "2"
+    memory_mb: 16384
+    pids: 512
+    storage_mb: 20480

@@ -24,7 +24,10 @@ envgen/.generated/
 workspace_eval/.generated/
 workspace_eval/output/
 workspace_eval/logs/
-workspace_eval/experiments/
+# experiments/ 是运行产物目录，整个忽略；但模板配置要入库，供他人照抄。
+# 注意必须写成 `dir/*` + 反例：写成 `dir/` 时目录本身被忽略，`!` 无法把里面的文件救回来。
+workspace_eval/experiments/*
+!workspace_eval/experiments/workspace-bench-hard.yaml
 curate/.generated/
 curate/experiments/
 */runs/
