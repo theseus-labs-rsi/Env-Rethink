@@ -7,7 +7,8 @@
     <a href="#method">Method</a> ·
     <a href="#results">Results</a> ·
     <a href="#quick-start">Quick Start</a> ·
-    <a href="#documentation">Documentation</a>
+    <a href="#documentation">Documentation</a> ·
+    <a href="#citation">Citation</a>
   </p>
   <p>
     <a href="https://github.com/theseus-labs-rsi/Env-Rethink"><img src="https://img.shields.io/badge/GitHub-Env--Rethink-181717?logo=github&logoColor=white" alt="GitHub repository" /></a>
@@ -230,6 +231,22 @@ The model curator labels files in batches, materializes a selected workspace wit
 For reproducible comparisons, record the task/workspace snapshot, runtime image ID, harness and model versions, condition, and generation seeds. Keep rubric-guided or oracle context constructions separate from task-independent context conditions. Private audit records, rubrics, and reference answers must remain outside the task-solving agent's view.
 
 Judge runtime errors and incomplete responses are recorded as failed cases without a score. A completed judgment that fails every rubric remains a valid zero score.
+
+## Citation
+
+If you use Env-Rethink in your research, please cite our paper:
+
+```bibtex
+@misc{wu2026breakingenvironmentwallunified,
+      title={Breaking the Environment Wall: A Unified Framework for Preparing and Evolving Agent-Native Environments},
+      author={Yukai Wu and Yuanjing Yang and Le Zhou and Shaokun Han and Haoyu Wang and Zirui Tang and Xuzhou Zhu and Weihuang Zheng and Maxm Pan and Xuanhe Zhou and Fan Wu},
+      year={2026},
+      eprint={2609.29773},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2609.29773},
+}
+```
 
 ## License and Data Provenance
 
