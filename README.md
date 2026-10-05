@@ -9,6 +9,11 @@
     <a href="#quick-start">Quick Start</a> ·
     <a href="#documentation">Documentation</a>
   </p>
+  <p>
+    <a href="https://github.com/theseus-labs-rsi/Env-Rethink"><img src="https://img.shields.io/badge/GitHub-Env--Rethink-181717?logo=github&logoColor=white" alt="GitHub repository" /></a>
+    <a href="https://huggingface.co/datasets/Workspace-Bench/Workspace-Bench-Hard"><img src="https://img.shields.io/badge/HuggingFace-Workspace--Bench--Hard-orange?logo=huggingface&logoColor=white" alt="Dataset on HuggingFace" /></a>
+    <a href="https://arxiv.org/abs/2609.29773"><img src="https://img.shields.io/badge/arXiv-2609.29773-b31b1b?logo=arxiv&logoColor=white" alt="Paper on arXiv" /></a>
+  </p>
 </div>
 
 ## Overview
