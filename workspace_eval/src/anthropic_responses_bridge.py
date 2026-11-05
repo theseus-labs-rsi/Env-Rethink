@@ -403,9 +403,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     entry.setdefault("content", None)
                 messages.append(entry)
             else:
+                messages.extend(tool_results)
                 if text_parts:
                     messages.append({"role": "user", "content": "\n".join(text_parts)})
-                messages.extend(tool_results)
         # 与 responses 路径同样的“只保留完整 call/output 对”保护：Anthropic
         # 历史里可能有被拒绝/中断的 tool_use 没有对应 tool_result（例如 MCP 工具
         # 回合被截断、图片读取被 deny），DeepSeek 的 chat-completions 端点会以
