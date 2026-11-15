@@ -1,0 +1,77 @@
+{
+  "id": "7767eef2-56a3-4cea-8c9f-48c070c7d65b",
+  "snapshot": "gimp",
+  "instruction": "Please help change GIMP's theme from dark to light.",
+  "source": "https://www.youtube.com/watch?v=LX-S1CX1HUI",
+  "config": [
+    {
+      "type": "launch",
+      "parameters": {
+        "command": [
+          "gimp"
+        ]
+      }
+    },
+    {
+      "type": "execute",
+      "parameters": {
+        "command": [
+          "python3",
+          "-c",
+          "import subprocess;subprocess.run(['gsettings','set','org.gnome.desktop.interface','text-scaling-factor',str(3.0)],check=True);subprocess.run(['gsettings','set','org.gnome.desktop.interface','cursor-size','48'],check=True)"
+        ]
+      }
+    },
+    {
+      "type": "execute",
+      "parameters": {
+        "command": [
+          "python3",
+          "-c",
+          "\nimport json,os,re,time,subprocess\nfrom collections import deque\nfrom pathlib import Path\nimport pyautogui\n\ndef spawn(argv):\n    return subprocess.Popen(argv,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)\n\ndef focus(needle, timeout=30):\n    if needle=='GIMP':time.sleep(8)\n    for _ in range(int(timeout*2)):\n        text=subprocess.check_output(['wmctrl','-l']).decode(errors='replace')\n        matches=[line for line in text.splitlines() if (needle.casefold() in line.casefold() or needle=='GIMP' and 'GNU Image Manipulation Program' in line) and 'Startup' not in line]\n        if matches:\n            wid=matches[-1].split()[0]\n            subprocess.run(['wmctrl','-ia',wid],check=True)\n            time.sleep(1)\n            return wid\n        time.sleep(.5)\n    raise RuntimeError('Window not ready: '+needle)\n\ndef click_name(name):\n    try:\n        import pyatspi\n        desktop=pyatspi.Registry.getDesktop(0)\n        pending=deque([desktop]); count=0\n        while pending and count<14000:\n            obj=pending.popleft();count+=1\n            try:\n                if name.casefold()==str(obj.name).rstrip('.…').casefold():\n                    if obj.getState().contains(pyatspi.STATE_SHOWING):\n                        box=obj.queryComponent().getExtents(pyatspi.DESKTOP_COORDS)\n                        width,height=pyautogui.size()\n                        if box.width>0 and box.height>0 and 0<=box.x<width and 0<=box.y<height:\n                            pyautogui.click(min(width-1,box.x+box.width/2),min(height-1,box.y+box.height/2));time.sleep(.5);return True\n                    try:\n                        a=obj.queryAction()\n                        for action in range(a.nActions):\n                            if a.getName(action).casefold() in ['activate','click','press','select']:\n                                a.doAction(action);time.sleep(.5);return True\n                    except Exception:pass\n                pending.extend(obj[i] for i in range(obj.childCount))\n            except Exception:pass\n    except ImportError:pass\n    return False\n\ndef uno_doc():\n    import uno\n    spawn(['libreoffice','--accept=socket,host=127.0.0.1,port=2002;urp;StarOffice.ServiceManager','--norestore'])\n    local=uno.getComponentContext()\n    resolver=local.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver',local)\n    for _ in range(60):\n        try:\n            ctx=resolver.resolve('uno:socket,host=127.0.0.1,port=2002;urp;StarOffice.ComponentContext');break\n        except Exception:time.sleep(.3)\n    else:raise RuntimeError('UNO service unavailable')\n    sm=ctx.ServiceManager; desktop=sm.createInstanceWithContext('com.sun.star.frame.Desktop',ctx)\n    doc=desktop.getCurrentComponent()\n    if not doc or not hasattr(doc,'getCurrentController'):raise RuntimeError('No active office document')\n    return doc,sm.createInstanceWithContext('com.sun.star.frame.DispatchHelper',ctx)\n\ndef dispatch(doc,helper,url):\n    if url in ['.uno:ExportToPDF','.uno:Print','.uno:EditStyle','.uno:InsertBreak','.uno:ParagraphDialog']:\n        code=\"import uno;local=uno.getComponentContext();r=local.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver',local);c=r.resolve('uno:socket,host=127.0.0.1,port=2002;urp;StarOffice.ComponentContext');s=c.ServiceManager;d=s.createInstanceWithContext('com.sun.star.frame.Desktop',c).getCurrentComponent();h=s.createInstanceWithContext('com.sun.star.frame.DispatchHelper',c);h.executeDispatch(d.CurrentController.Frame,\"+repr(url)+\",'',0,())\"\n        spawn(['python3','-c',code]);time.sleep(3);return\n    helper.executeDispatch(doc.getCurrentController().getFrame(),url,'',0,())\n    time.sleep(1)\n\ndef pref_set(path,key,value):\n    p=Path(path);p.parent.mkdir(parents=True,exist_ok=True)\n    s=p.read_text() if p.exists() else ''\n    line=key+'='+str(value)\n    s=re.sub(r'(?m)^#?'+re.escape(key)+r'=.*$',line,s) if re.search(r'(?m)^#?'+re.escape(key)+'=',s) else s+'\\n'+line+'\\n'\n    p.write_text(s)\n\nfocus('GIMP');assert click_name('Preferences');time.sleep(2);subprocess.run(['wmctrl','-r','Preferences','-b','add,maximized_vert,maximized_horz']);time.sleep(1);pyautogui.moveTo(250,900);pyautogui.scroll(-8);time.sleep(.5);assert click_name('Icon Theme')"
+        ]
+      }
+    }
+  ],
+  "trajectory": "trajectories/",
+  "related_apps": [
+    "gimp"
+  ],
+  "evaluator": {
+    "postconfig": [
+      {
+        "type": "execute",
+        "parameters": {
+          "command": [
+            "python3",
+            "-c",
+            "import time; import pyautogui; time.sleep(1);pyautogui.hotkey([\"ctrl\", \"q\"]);"
+          ]
+        }
+      },
+      {
+        "type": "sleep",
+        "parameters": {
+          "seconds": 0.5
+        }
+      }
+    ],
+    "func": "check_config_status",
+    "expected": {
+      "type": "rule",
+      "rules": {
+        "type:": "key-value",
+        "key": "theme",
+        "value": "\"Light\""
+      }
+    },
+    "result": {
+      "type": "gimp_config_file",
+      "file_name": "gimprc",
+      "dest": "gimprc"
+    }
+  },
+  "proxy": false,
+  "fixed_ip": false,
+  "possibility_of_env_change": "low"
+}

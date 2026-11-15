@@ -1,0 +1,66 @@
+{
+  "id": "e0df059f-28a6-4169-924f-b9623e7184cc",
+  "snapshot": "os",
+  "instruction": "I have a directory named \"todo_list_Jan_1\". Can you help me change its name into \"todo_list_Jan_2\"?",
+  "source": "https://help.ubuntu.com/lts/ubuntu-help/files-rename.html.en",
+  "trajectory": "trajectories/",
+  "config": [
+    {
+      "type": "execute",
+      "parameters": {
+        "command": "echo {CLIENT_PASSWORD} | sudo -S mkdir ~/Desktop/todo_list_Jan_1",
+        "shell": true
+      }
+    },
+    {
+      "type": "execute",
+      "parameters": {
+        "command": [
+          "python",
+          "-c",
+          "import pyautogui; import time; pyautogui.click({SCREEN_WIDTH_HALF}, {SCREEN_HEIGHT_HALF}); time.sleep(0.5);"
+        ]
+      }
+    },
+    {
+      "type": "execute",
+      "parameters": {
+        "command": [
+          "python3",
+          "-c",
+          "import subprocess;subprocess.run(['gsettings','set','org.gnome.desktop.interface','text-scaling-factor',str(3.0)],check=True);subprocess.run(['gsettings','set','org.gnome.desktop.interface','cursor-size','48'],check=True)"
+        ]
+      }
+    },
+    {
+      "type": "execute",
+      "parameters": {
+        "command": [
+          "python3",
+          "-c",
+          "\nimport json,os,re,time,subprocess\nfrom collections import deque\nfrom pathlib import Path\nimport pyautogui\n\ndef spawn(argv):\n    return subprocess.Popen(argv,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)\n\ndef focus(needle, timeout=30):\n    if needle=='GIMP':time.sleep(8)\n    for _ in range(int(timeout*2)):\n        text=subprocess.check_output(['wmctrl','-l']).decode(errors='replace')\n        matches=[line for line in text.splitlines() if (needle.casefold() in line.casefold() or needle=='GIMP' and 'GNU Image Manipulation Program' in line) and 'Startup' not in line]\n        if matches:\n            wid=matches[-1].split()[0]\n            subprocess.run(['wmctrl','-ia',wid],check=True)\n            time.sleep(1)\n            return wid\n        time.sleep(.5)\n    raise RuntimeError('Window not ready: '+needle)\n\ndef click_name(name):\n    try:\n        import pyatspi\n        desktop=pyatspi.Registry.getDesktop(0)\n        pending=deque([desktop]); count=0\n        while pending and count<14000:\n            obj=pending.popleft();count+=1\n            try:\n                if name.casefold()==str(obj.name).rstrip('.…').casefold():\n                    if obj.getState().contains(pyatspi.STATE_SHOWING):\n                        box=obj.queryComponent().getExtents(pyatspi.DESKTOP_COORDS)\n                        width,height=pyautogui.size()\n                        if box.width>0 and box.height>0 and 0<=box.x<width and 0<=box.y<height:\n                            pyautogui.click(min(width-1,box.x+box.width/2),min(height-1,box.y+box.height/2));time.sleep(.5);return True\n                    try:\n                        a=obj.queryAction()\n                        for action in range(a.nActions):\n                            if a.getName(action).casefold() in ['activate','click','press','select']:\n                                a.doAction(action);time.sleep(.5);return True\n                    except Exception:pass\n                pending.extend(obj[i] for i in range(obj.childCount))\n            except Exception:pass\n    except ImportError:pass\n    return False\n\ndef uno_doc():\n    import uno\n    spawn(['libreoffice','--accept=socket,host=127.0.0.1,port=2002;urp;StarOffice.ServiceManager','--norestore'])\n    local=uno.getComponentContext()\n    resolver=local.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver',local)\n    for _ in range(60):\n        try:\n            ctx=resolver.resolve('uno:socket,host=127.0.0.1,port=2002;urp;StarOffice.ComponentContext');break\n        except Exception:time.sleep(.3)\n    else:raise RuntimeError('UNO service unavailable')\n    sm=ctx.ServiceManager; desktop=sm.createInstanceWithContext('com.sun.star.frame.Desktop',ctx)\n    doc=desktop.getCurrentComponent()\n    if not doc or not hasattr(doc,'getCurrentController'):raise RuntimeError('No active office document')\n    return doc,sm.createInstanceWithContext('com.sun.star.frame.DispatchHelper',ctx)\n\ndef dispatch(doc,helper,url):\n    if url in ['.uno:ExportToPDF','.uno:Print','.uno:EditStyle','.uno:InsertBreak','.uno:ParagraphDialog']:\n        code=\"import uno;local=uno.getComponentContext();r=local.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver',local);c=r.resolve('uno:socket,host=127.0.0.1,port=2002;urp;StarOffice.ComponentContext');s=c.ServiceManager;d=s.createInstanceWithContext('com.sun.star.frame.Desktop',c).getCurrentComponent();h=s.createInstanceWithContext('com.sun.star.frame.DispatchHelper',c);h.executeDispatch(d.CurrentController.Frame,\"+repr(url)+\",'',0,())\"\n        spawn(['python3','-c',code]);time.sleep(3);return\n    helper.executeDispatch(doc.getCurrentController().getFrame(),url,'',0,())\n    time.sleep(1)\n\ndef pref_set(path,key,value):\n    p=Path(path);p.parent.mkdir(parents=True,exist_ok=True)\n    s=p.read_text() if p.exists() else ''\n    line=key+'='+str(value)\n    s=re.sub(r'(?m)^#?'+re.escape(key)+r'=.*$',line,s) if re.search(r'(?m)^#?'+re.escape(key)+'=',s) else s+'\\n'+line+'\\n'\n    p.write_text(s)\n\nimport pyatspi\nfrom collections import deque\np=Path('/home/user/.config/gtk-3.0/bookmarks');p.parent.mkdir(parents=True,exist_ok=True)\nline='file:///home/user/Desktop/todo_list_Jan_1 todo_list_Jan_1'\ns=p.read_text() if p.exists() else ''\nif line not in s:p.write_text(s.rstrip()+'\\n'+line+'\\n')\nspawn(['nautilus','--new-window','/home/user/Desktop/todo_list_Jan_1']);time.sleep(3);wid=focus('todo_list_Jan_1');subprocess.run(['wmctrl','-ir',wid,'-b','add,maximized_vert,maximized_horz']);time.sleep(1)\nq=deque([pyatspi.Registry.getDesktop(0)]);found=False;count=0\nwhile q and count<10000:\n o=q.popleft();count+=1\n try:\n  if o.name=='todo_list_Jan_1' and o.getState().contains(pyatspi.STATE_SHOWING):\n   b=o.queryComponent().getExtents(pyatspi.DESKTOP_COORDS)\n   if 0<=b.x<500 and b.y>180 and b.y<1000:\n    pyautogui.rightClick(b.x+b.width/2,b.y+b.height/2);time.sleep(.5);found=True;break\n  q.extend(o[i] for i in range(o.childCount))\n except Exception:pass\nassert found,'Sidebar bookmark not visible'\nassert click_name('Rename'),'Bookmark rename action not available'\n"
+        ]
+      }
+    }
+  ],
+  "related_apps": [
+    "os"
+  ],
+  "evaluator": {
+    "func": "exact_match",
+    "result": {
+      "type": "vm_command_line",
+      "command": "[ -d ~/Desktop/todo_list_Jan_2 ] && [ ! -d ~/Desktop/todo_list_Jan_1 ] && echo 'Directory exists.' || echo 'Directory does not exist.'",
+      "shell": true
+    },
+    "expected": {
+      "type": "rule",
+      "rules": {
+        "expected": "Directory exists.\n"
+      }
+    }
+  },
+  "proxy": false,
+  "fixed_ip": false,
+  "possibility_of_env_change": "low"
+}

@@ -1,0 +1,88 @@
+{
+  "id": "70745df8-f2f5-42bd-8074-fbc10334fcc5",
+  "snapshot": "vscode",
+  "instruction": "Please help me open the autosave feature of VS Code and delay AutoSave operations for 500 milliseconds in the VS Code setting.",
+  "source": "https://download.microsoft.com/download/8/A/4/8A48E46A-C355-4E5C-8417-E6ACD8A207D4/VisualStudioCode-TipsAndTricks-Vol.1.pdf",
+  "config": [
+    {
+      "type": "download",
+      "parameters": {
+        "files": [
+          {
+            "url": "https://huggingface.co/datasets/xlangai/ubuntu_osworld_file_cache/resolve/main/vs_code/70745df8-f2f5-42bd-8074-fbc10334fcc5/HW-8-main-20240320T121653Z-001.zip",
+            "path": "/home/user/Downloads/HW-8-main-20240207T164539Z-001.zip"
+          }
+        ]
+      }
+    },
+    {
+      "type": "execute",
+      "parameters": {
+        "command": [
+          "/bin/bash",
+          "-c",
+          "cd /home/user/Downloads && unzip -q HW-8-main-20240207T164539Z-001.zip"
+        ]
+      }
+    },
+    {
+      "type": "launch",
+      "parameters": {
+        "command": [
+          "code",
+          "/home/user/Downloads/HW-8-main/"
+        ]
+      }
+    },
+    {
+      "type": "activate_window",
+      "parameters": {
+        "window_name": "Visual Studio Code"
+      }
+    },
+    {
+      "type": "execute",
+      "parameters": {
+        "command": [
+          "python3",
+          "-c",
+          "import subprocess;subprocess.run(['gsettings','set','org.gnome.desktop.interface','text-scaling-factor',str(3.0)],check=True);subprocess.run(['gsettings','set','org.gnome.desktop.interface','cursor-size','48'],check=True)"
+        ]
+      }
+    },
+    {
+      "type": "execute",
+      "parameters": {
+        "command": [
+          "python3",
+          "-c",
+          "\nimport json,os,re,time,subprocess\nfrom collections import deque\nfrom pathlib import Path\nimport pyautogui\n\ndef spawn(argv):\n    return subprocess.Popen(argv,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)\n\ndef focus(needle, timeout=30):\n    if needle=='GIMP':time.sleep(8)\n    for _ in range(int(timeout*2)):\n        text=subprocess.check_output(['wmctrl','-l']).decode(errors='replace')\n        matches=[line for line in text.splitlines() if (needle.casefold() in line.casefold() or needle=='GIMP' and 'GNU Image Manipulation Program' in line) and 'Startup' not in line]\n        if matches:\n            wid=matches[-1].split()[0]\n            subprocess.run(['wmctrl','-ia',wid],check=True)\n            time.sleep(1)\n            return wid\n        time.sleep(.5)\n    raise RuntimeError('Window not ready: '+needle)\n\ndef click_name(name):\n    try:\n        import pyatspi\n        desktop=pyatspi.Registry.getDesktop(0)\n        pending=deque([desktop]); count=0\n        while pending and count<14000:\n            obj=pending.popleft();count+=1\n            try:\n                if name.casefold()==str(obj.name).rstrip('.…').casefold():\n                    if obj.getState().contains(pyatspi.STATE_SHOWING):\n                        box=obj.queryComponent().getExtents(pyatspi.DESKTOP_COORDS)\n                        width,height=pyautogui.size()\n                        if box.width>0 and box.height>0 and 0<=box.x<width and 0<=box.y<height:\n                            pyautogui.click(min(width-1,box.x+box.width/2),min(height-1,box.y+box.height/2));time.sleep(.5);return True\n                    try:\n                        a=obj.queryAction()\n                        for action in range(a.nActions):\n                            if a.getName(action).casefold() in ['activate','click','press','select']:\n                                a.doAction(action);time.sleep(.5);return True\n                    except Exception:pass\n                pending.extend(obj[i] for i in range(obj.childCount))\n            except Exception:pass\n    except ImportError:pass\n    return False\n\ndef uno_doc():\n    import uno\n    spawn(['libreoffice','--accept=socket,host=127.0.0.1,port=2002;urp;StarOffice.ServiceManager','--norestore'])\n    local=uno.getComponentContext()\n    resolver=local.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver',local)\n    for _ in range(60):\n        try:\n            ctx=resolver.resolve('uno:socket,host=127.0.0.1,port=2002;urp;StarOffice.ComponentContext');break\n        except Exception:time.sleep(.3)\n    else:raise RuntimeError('UNO service unavailable')\n    sm=ctx.ServiceManager; desktop=sm.createInstanceWithContext('com.sun.star.frame.Desktop',ctx)\n    doc=desktop.getCurrentComponent()\n    if not doc or not hasattr(doc,'getCurrentController'):raise RuntimeError('No active office document')\n    return doc,sm.createInstanceWithContext('com.sun.star.frame.DispatchHelper',ctx)\n\ndef dispatch(doc,helper,url):\n    if url in ['.uno:ExportToPDF','.uno:Print','.uno:EditStyle','.uno:InsertBreak','.uno:ParagraphDialog']:\n        code=\"import uno;local=uno.getComponentContext();r=local.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver',local);c=r.resolve('uno:socket,host=127.0.0.1,port=2002;urp;StarOffice.ComponentContext');s=c.ServiceManager;d=s.createInstanceWithContext('com.sun.star.frame.Desktop',c).getCurrentComponent();h=s.createInstanceWithContext('com.sun.star.frame.DispatchHelper',c);h.executeDispatch(d.CurrentController.Frame,\"+repr(url)+\",'',0,())\"\n        spawn(['python3','-c',code]);time.sleep(3);return\n    helper.executeDispatch(doc.getCurrentController().getFrame(),url,'',0,())\n    time.sleep(1)\n\ndef pref_set(path,key,value):\n    p=Path(path);p.parent.mkdir(parents=True,exist_ok=True)\n    s=p.read_text() if p.exists() else ''\n    line=key+'='+str(value)\n    s=re.sub(r'(?m)^#?'+re.escape(key)+r'=.*$',line,s) if re.search(r'(?m)^#?'+re.escape(key)+'=',s) else s+'\\n'+line+'\\n'\n    p.write_text(s)\n\nwp=Path('/home/user/Downloads/HW-8-main')/'.vscode/settings.json';wp.parent.mkdir(parents=True,exist_ok=True);wd=json.loads(wp.read_text()) if wp.exists() else {};wd.update({'[python]': {'files.autoSave': 'afterDelay', 'files.autoSaveDelay': 500}});wp.write_text(json.dumps(wd,indent=2));p=Path('/home/user/Downloads/HW-8-main')/'Profiles/User/settings.json';p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps({'files.autoSave': 'afterDelay', 'files.autoSaveDelay': 500},indent=2));u=Path('/home/user/.config/Code/User/settings.json');u.parent.mkdir(parents=True,exist_ok=True);v=json.loads(u.read_text()) if u.exists() else {};v['window.zoomLevel']=8;u.write_text(json.dumps(v,indent=2));spawn(['code','/home/user/Downloads/HW-8-main',str(p)]);time.sleep(3);focus('Visual Studio Code')"
+        ]
+      }
+    }
+  ],
+  "trajectory": "trajectories/",
+  "related_apps": [
+    "vscode"
+  ],
+  "evaluator": {
+    "func": "check_json_settings",
+    "expected": {
+      "type": "rule",
+      "rules": {
+        "expected": {
+          "files.autoSave": "afterDelay",
+          "files.autoSaveDelay": 500
+        }
+      }
+    },
+    "result": {
+      "type": "vm_file",
+      "path": "/home/user/.config/Code/User/settings.json",
+      "dest": "settings.json"
+    }
+  },
+  "proxy": false,
+  "fixed_ip": false,
+  "possibility_of_env_change": "low"
+}

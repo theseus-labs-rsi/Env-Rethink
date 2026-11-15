@@ -1,0 +1,91 @@
+{
+  "id": "ce88f674-ab7a-43da-9201-468d38539e4a",
+  "snapshot": "libreoffice_impress",
+  "instruction": "Please set my slides upright instead of sideways.",
+  "source": "https://justclickhere.co.uk/resources/change-slides-in-impress-to-portrait/",
+  "config": [
+    {
+      "type": "download",
+      "parameters": {
+        "files": [
+          {
+            "url": "https://huggingface.co/datasets/xlangai/ubuntu_osworld_file_cache/resolve/main/libreoffice_impress/ce88f674-ab7a-43da-9201-468d38539e4a/AM_Last_Page_Template.pptx",
+            "path": "/home/user/Desktop/AM_Last_Page_Template.pptx"
+          }
+        ]
+      }
+    },
+    {
+      "type": "open",
+      "parameters": {
+        "path": "/home/user/Desktop/AM_Last_Page_Template.pptx"
+      }
+    },
+    {
+      "type": "execute",
+      "parameters": {
+        "command": [
+          "python3",
+          "-c",
+          "import subprocess;subprocess.run(['gsettings','set','org.gnome.desktop.interface','text-scaling-factor',str(2.0)],check=True);subprocess.run(['gsettings','set','org.gnome.desktop.interface','cursor-size','48'],check=True)"
+        ]
+      }
+    },
+    {
+      "type": "execute",
+      "parameters": {
+        "command": [
+          "python3",
+          "-c",
+          "\nimport json,os,re,time,subprocess\nfrom pathlib import Path\nimport pyautogui\n\ndef spawn(argv):\n    return subprocess.Popen(argv,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)\n\ndef focus(needle, timeout=30):\n    for _ in range(int(timeout*2)):\n        text=subprocess.check_output(['wmctrl','-l']).decode(errors='replace')\n        matches=[line for line in text.splitlines() if needle.casefold() in line.casefold() and 'Startup' not in line]\n        if matches:\n            wid=matches[-1].split()[0]\n            subprocess.run(['wmctrl','-ia',wid],check=True)\n            time.sleep(1)\n            return wid\n        time.sleep(.5)\n    raise RuntimeError('Window not ready: '+needle)\n\ndef click_name(name):\n    try:\n        import pyatspi\n        desktop=pyatspi.Registry.getDesktop(0)\n        pending=[desktop]; count=0\n        while pending and count<4000:\n            obj=pending.pop();count+=1\n            try:\n                if name.casefold()==str(obj.name).casefold():\n                    a=obj.queryAction()\n                    if a.nActions:\n                        a.doAction(0);time.sleep(.5);return True\n                pending.extend(obj[i] for i in range(obj.childCount))\n            except Exception:pass\n    except ImportError:pass\n    return False\n\ndef uno_doc():\n    import uno\n    spawn(['libreoffice','--accept=socket,host=127.0.0.1,port=2002;urp;StarOffice.ServiceManager','--norestore'])\n    local=uno.getComponentContext()\n    resolver=local.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver',local)\n    for _ in range(60):\n        try:\n            ctx=resolver.resolve('uno:socket,host=127.0.0.1,port=2002;urp;StarOffice.ComponentContext');break\n        except Exception:time.sleep(.3)\n    else:raise RuntimeError('UNO service unavailable')\n    sm=ctx.ServiceManager; desktop=sm.createInstanceWithContext('com.sun.star.frame.Desktop',ctx)\n    doc=desktop.getCurrentComponent()\n    if not doc or not hasattr(doc,'getCurrentController'):raise RuntimeError('No active office document')\n    return doc,sm.createInstanceWithContext('com.sun.star.frame.DispatchHelper',ctx)\n\ndef dispatch(doc,helper,url):\n    helper.executeDispatch(doc.getCurrentController().getFrame(),url,'',0,())\n    time.sleep(1)\n\ndef pref_set(path,key,value):\n    p=Path(path);p.parent.mkdir(parents=True,exist_ok=True)\n    s=p.read_text() if p.exists() else ''\n    line=key+'='+str(value)\n    s=re.sub(r'(?m)^#?'+re.escape(key)+r'=.*$',line,s) if re.search(r'(?m)^#?'+re.escape(key)+'=',s) else s+'\\n'+line+'\\n'\n    p.write_text(s)\n\nfocus('LibreOffice')\ndoc,dh=uno_doc();dispatch(doc,dh,'.uno:Print')"
+        ]
+      }
+    }
+  ],
+  "trajectory": "trajectories/",
+  "related_apps": [
+    "libreoffice_impress"
+  ],
+  "evaluator": {
+    "postconfig": [
+      {
+        "type": "activate_window",
+        "parameters": {
+          "window_name": "AM_Last_Page_Template.pptx - LibreOffice Impress",
+          "strict": true
+        }
+      },
+      {
+        "type": "sleep",
+        "parameters": {
+          "seconds": 0.5
+        }
+      },
+      {
+        "type": "execute",
+        "parameters": {
+          "command": [
+            "python",
+            "-c",
+            "import pyautogui; import time; pyautogui.hotkey('ctrl', 's'); time.sleep(0.5);"
+          ]
+        }
+      },
+      {
+        "type": "sleep",
+        "parameters": {
+          "seconds": 0.5
+        }
+      }
+    ],
+    "func": "check_slide_orientation_Portrait",
+    "result": {
+      "type": "vm_file",
+      "path": "/home/user/Desktop/AM_Last_Page_Template.pptx",
+      "dest": "AM_Last_Page_Template.pptx"
+    }
+  },
+  "proxy": false,
+  "fixed_ip": false,
+  "possibility_of_env_change": "low"
+}

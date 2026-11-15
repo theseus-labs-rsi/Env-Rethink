@@ -1,0 +1,124 @@
+{
+  "id": "21760ecb-8f62-40d2-8d85-0cee5725cb72",
+  "snapshot": "libreoffice_impress",
+  "instruction": "Could you help me add slide transition \"dissolve\" to my first page?",
+  "source": "https://www.libreofficehelp.com/add-animations-transitions-libreoffice-impress-slides/",
+  "config": [
+    {
+      "type": "download",
+      "parameters": {
+        "files": [
+          {
+            "url": "https://huggingface.co/datasets/xlangai/ubuntu_osworld_file_cache/resolve/main/libreoffice_impress/21760ecb-8f62-40d2-8d85-0cee5725cb72/Ch4%20Video%20Effect.pptx",
+            "path": "/home/user/Desktop/Ch4 Video Effect.pptx"
+          }
+        ]
+      }
+    },
+    {
+      "type": "execute",
+      "parameters": {
+        "command": [
+          "python3",
+          "-c",
+          "from pathlib import Path\nfrom zipfile import ZipFile,ZIP_DEFLATED\np=Path('/home/user/Desktop/Ch4 Video Effect.pptx')\nwith ZipFile(p) as z:files={n:z.read(n) for n in z.namelist()}\nif 'ppt/slides/slide2.xml' in files:\n files['ppt/slides/slide2.xml']=files['ppt/slides/slide1.xml']\n if 'ppt/slides/_rels/slide1.xml.rels' in files:files['ppt/slides/_rels/slide2.xml.rels']=files['ppt/slides/_rels/slide1.xml.rels']\nwith ZipFile(p,'w',ZIP_DEFLATED) as z:\n for n,data in files.items():z.writestr(n,data)\n"
+        ]
+      }
+    },
+    {
+      "type": "open",
+      "parameters": {
+        "path": "/home/user/Desktop/Ch4 Video Effect.pptx"
+      }
+    },
+    {
+      "type": "sleep",
+      "parameters": {
+        "seconds": 0.5
+      }
+    },
+    {
+      "type": "execute",
+      "parameters": {
+        "command": [
+          "python",
+          "-c",
+          "import pyautogui; import time;  time.sleep(4); pyautogui.doubleClick(x={SCREEN_WIDTH_HALF}, y={SCREEN_HEIGHT_HALF}); time.sleep(0.5);pyautogui.mouseDown(); pyautogui.mouseUp(); time.sleep(0.5);"
+        ]
+      }
+    },
+    {
+      "type": "execute",
+      "parameters": {
+        "command": [
+          "python3",
+          "-c",
+          "import subprocess;subprocess.run(['gsettings','set','org.gnome.desktop.interface','text-scaling-factor',str(2.0)],check=True);subprocess.run(['gsettings','set','org.gnome.desktop.interface','cursor-size','48'],check=True)"
+        ]
+      }
+    },
+    {
+      "type": "execute",
+      "parameters": {
+        "command": [
+          "python3",
+          "-c",
+          "\nimport json,os,re,time,subprocess\nfrom collections import deque\nfrom pathlib import Path\nimport pyautogui\n\ndef spawn(argv):\n    return subprocess.Popen(argv,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)\n\ndef focus(needle, timeout=30):\n    if needle=='GIMP':time.sleep(8)\n    for _ in range(int(timeout*2)):\n        text=subprocess.check_output(['wmctrl','-l']).decode(errors='replace')\n        matches=[line for line in text.splitlines() if (needle.casefold() in line.casefold() or needle=='GIMP' and 'GNU Image Manipulation Program' in line) and 'Startup' not in line]\n        if matches:\n            wid=matches[-1].split()[0]\n            subprocess.run(['wmctrl','-ia',wid],check=True)\n            time.sleep(1)\n            return wid\n        time.sleep(.5)\n    raise RuntimeError('Window not ready: '+needle)\n\ndef click_name(name):\n    try:\n        import pyatspi\n        desktop=pyatspi.Registry.getDesktop(0)\n        pending=deque([desktop]); count=0\n        while pending and count<14000:\n            obj=pending.popleft();count+=1\n            try:\n                if name.casefold()==str(obj.name).rstrip('.…').casefold():\n                    if obj.getState().contains(pyatspi.STATE_SHOWING):\n                        box=obj.queryComponent().getExtents(pyatspi.DESKTOP_COORDS)\n                        width,height=pyautogui.size()\n                        if box.width>0 and box.height>0 and 0<=box.x<width and 0<=box.y<height:\n                            pyautogui.click(min(width-1,box.x+box.width/2),min(height-1,box.y+box.height/2));time.sleep(.5);return True\n                    try:\n                        a=obj.queryAction()\n                        for action in range(a.nActions):\n                            if a.getName(action).casefold() in ['activate','click','press','select']:\n                                a.doAction(action);time.sleep(.5);return True\n                    except Exception:pass\n                pending.extend(obj[i] for i in range(obj.childCount))\n            except Exception:pass\n    except ImportError:pass\n    return False\n\ndef uno_doc():\n    import uno\n    spawn(['libreoffice','--accept=socket,host=127.0.0.1,port=2002;urp;StarOffice.ServiceManager','--norestore'])\n    local=uno.getComponentContext()\n    resolver=local.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver',local)\n    for _ in range(60):\n        try:\n            ctx=resolver.resolve('uno:socket,host=127.0.0.1,port=2002;urp;StarOffice.ComponentContext');break\n        except Exception:time.sleep(.3)\n    else:raise RuntimeError('UNO service unavailable')\n    sm=ctx.ServiceManager; desktop=sm.createInstanceWithContext('com.sun.star.frame.Desktop',ctx)\n    doc=desktop.getCurrentComponent()\n    if not doc or not hasattr(doc,'getCurrentController'):raise RuntimeError('No active office document')\n    return doc,sm.createInstanceWithContext('com.sun.star.frame.DispatchHelper',ctx)\n\ndef dispatch(doc,helper,url):\n    if url in ['.uno:ExportToPDF','.uno:Print','.uno:EditStyle','.uno:InsertBreak','.uno:ParagraphDialog']:\n        code=\"import uno;local=uno.getComponentContext();r=local.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver',local);c=r.resolve('uno:socket,host=127.0.0.1,port=2002;urp;StarOffice.ComponentContext');s=c.ServiceManager;d=s.createInstanceWithContext('com.sun.star.frame.Desktop',c).getCurrentComponent();h=s.createInstanceWithContext('com.sun.star.frame.DispatchHelper',c);h.executeDispatch(d.CurrentController.Frame,\"+repr(url)+\",'',0,())\"\n        spawn(['python3','-c',code]);time.sleep(3);return\n    helper.executeDispatch(doc.getCurrentController().getFrame(),url,'',0,())\n    time.sleep(1)\n\ndef pref_set(path,key,value):\n    p=Path(path);p.parent.mkdir(parents=True,exist_ok=True)\n    s=p.read_text() if p.exists() else ''\n    line=key+'='+str(value)\n    s=re.sub(r'(?m)^#?'+re.escape(key)+r'=.*$',line,s) if re.search(r'(?m)^#?'+re.escape(key)+'=',s) else s+'\\n'+line+'\\n'\n    p.write_text(s)\n\nfocus('LibreOffice')\ndoc,dh=uno_doc();pages=doc.DrawPages;assert pages.Count>=2;doc.CurrentController.setCurrentPage(pages.getByIndex(1));dispatch(doc,dh,'.uno:SlideChangeWindow')"
+        ]
+      }
+    }
+  ],
+  "trajectory": "trajectories/",
+  "related_apps": [
+    "libreoffice_impress"
+  ],
+  "evaluator": {
+    "postconfig": [
+      {
+        "type": "activate_window",
+        "parameters": {
+          "window_name": "Ch4 Video Effect.pptx - LibreOffice Impress",
+          "strict": true
+        }
+      },
+      {
+        "type": "sleep",
+        "parameters": {
+          "seconds": 0.5
+        }
+      },
+      {
+        "type": "execute",
+        "parameters": {
+          "command": [
+            "python",
+            "-c",
+            "import pyautogui; import time; pyautogui.hotkey('ctrl', 's'); time.sleep(4.5);"
+          ]
+        }
+      },
+      {
+        "type": "sleep",
+        "parameters": {
+          "seconds": 4.5
+        }
+      }
+    ],
+    "func": "check_transition",
+    "expected": {
+      "type": "rule",
+      "rules": {
+        "slide_idx": 0,
+        "transition_type": "dissolve"
+      }
+    },
+    "result": {
+      "type": "vm_file",
+      "path": "/home/user/Desktop/Ch4 Video Effect.pptx",
+      "dest": "Ch4 Video Effect.pptx"
+    }
+  },
+  "proxy": false,
+  "fixed_ip": false,
+  "possibility_of_env_change": "low"
+}
