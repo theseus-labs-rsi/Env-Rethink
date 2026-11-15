@@ -1,0 +1,303 @@
+[
+  {
+    "domain": "chrome",
+    "id": "bb5e4c0d-f964-439c-97b6-bdb9747de3f4",
+    "type": "browser-search-setting",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/chrome/bb5e4c0d-f964-439c-97b6-bdb9747de3f4.json",
+    "design_title": "默认搜索引擎与站内搜索辨别",
+    "final_design": "保留文本缩放2.0和鼠标尺寸48，将Chrome定位到搜索引擎管理页的站内搜索区域；默认搜索引擎目标不预先修改。",
+    "feasible_recovery": "关闭其他前台窗口，在Chrome设置中选择默认搜索引擎，而非添加站内搜索。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "chrome",
+    "id": "2ad9387a-65d8-4e33-ad5b-7580065a27ca",
+    "type": "browser-bookmarks",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/chrome/2ad9387a-65d8-4e33-ad5b-7580065a27ca.json",
+    "design_title": "书签栏文件夹与同名链接/其他书签辨别",
+    "final_design": "在其他书签中创建Favorites诱饵文件夹；书签栏增加指向其他书签页的同名URL链接但不创建目标文件夹；展开其他书签范围并放大浏览器页面。 另将独立配置档编辑器置于前台，其Bookmarks bar folder显示Favorites，数据仅保存在/home/user/Desktop/profiles/bookmarks.html，不绑定实际活动应用；需要与活动应用/系统状态交叉核对。",
+    "feasible_recovery": "关闭配置档编辑器，核对书签栏同名项目的类型，创建真正的Favorites文件夹。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "chrome",
+    "id": "030eeff7-b492-4218-b312-701ec99ee0cc",
+    "type": "browser-privacy-setting",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/chrome/030eeff7-b492-4218-b312-701ec99ee0cc.json",
+    "design_title": "广告隐私与Do Not Track辨别",
+    "final_design": "将Chrome定位到广告隐私设置页；保留文本缩放2.0，使浏览器全局Do Not Track不在默认视图。",
+    "feasible_recovery": "通过地址栏进入全局隐私设置，再找到Do Not Track并启用。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "gimp",
+    "id": "d52d6308-ec58-42b7-a2c9-de80e4837b2b",
+    "type": "image-editor-layout",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/gimp/d52d6308-ec58-42b7-a2c9-de80e4837b2b.json",
+    "design_title": "GIMP停靠栏与首选项窗口辨别",
+    "final_design": "保留文本缩放3.0，打开GIMP首选项并进入窗口管理；Tab默认作用于对话框控件，真正的Hide Docks需要返回主图像窗口操作。 另将独立配置档编辑器置于前台，其Hide docks显示True，数据仅保存在/home/user/Desktop/profiles/sessionrc，不绑定实际活动应用；需要与活动应用/系统状态交叉核对。",
+    "feasible_recovery": "关闭配置档编辑器，关闭首选项，切回GIMP主窗口，通过Windows菜单或Tab隐藏停靠栏。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "gimp",
+    "id": "7b7617bd-57cc-468e-9c91-40c4ec2bcb3d",
+    "type": "image-editor-undo-setting",
+    "replacement_of": "b148e375-fe0b-4bec-90e7-38632b0d73c2",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/gimp/7b7617bd-57cc-468e-9c91-40c4ec2bcb3d.json",
+    "design_title": "图像撤销历史与全局撤销步数辨别",
+    "final_design": "保留文本缩放3.0，打开GIMP的Undo History图像历史面板；不修改全局最小撤销步数，历史面板不是持久设置界面。 另将独立配置档编辑器置于前台，其Minimum undo steps显示100，数据仅保存在/home/user/Desktop/profiles/gimprc，不绑定实际活动应用；需要与活动应用/系统状态交叉核对。",
+    "feasible_recovery": "关闭配置档编辑器，进入Preferences的System Resources，设置最小撤销步数为100并保存。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "gimp",
+    "id": "7767eef2-56a3-4cea-8c9f-48c070c7d65b",
+    "type": "image-editor-theme",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/gimp/7767eef2-56a3-4cea-8c9f-48c070c7d65b.json",
+    "design_title": "图标主题与应用主题辨别",
+    "final_design": "文本缩放3.0，打开GIMP首选项并选中Icon Theme而非Theme；桌面主题及GIMP主题目标保持原值。",
+    "feasible_recovery": "切换至Theme页，选择Light并保存。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "libreoffice_calc",
+    "id": "1273e544-688f-496b-8d89-3e0f40aa0606",
+    "type": "spreadsheet-copy-column",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/libreoffice_calc/1273e544-688f-496b-8d89-3e0f40aa0606.json",
+    "design_title": "隐藏Revenue列与邻列选择",
+    "final_design": "保持Sheet1全部单元格值不变，隐藏Revenue列，并预选相邻可见列；文本缩放2.0。",
+    "feasible_recovery": "在Calc中显示隐藏列，复制Revenue及表头至Sheet2，保持Sheet1数据不变。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "libreoffice_calc",
+    "id": "3aaa4e37-dc91-482e-99af-132a612d40f3",
+    "type": "spreadsheet-csv-export",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/libreoffice_calc/3aaa4e37-dc91-482e-99af-132a612d40f3.json",
+    "design_title": "PDF导出与CSV保存辨别",
+    "final_design": "保留文本缩放2.0，打开原工作簿的PDF导出设置对话框；原XLSX及CSV期望值保持不变。",
+    "feasible_recovery": "取消PDF导出，使用另存为CSV并保留任务要求的导出选项。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "libreoffice_calc",
+    "id": "7efeb4b1-3d19-4762-b163-63328d66303b",
+    "type": "spreadsheet-fill-series",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/libreoffice_calc/7efeb4b1-3d19-4762-b163-63328d66303b.json",
+    "design_title": "隐藏行中的序号完整性",
+    "final_design": "保持原工作表数据不变，隐藏数据区的交替行并预选Seq No.列，文本缩放2.0。 另将独立配置档编辑器置于前台，其Seq No. format显示No. #，数据仅保存在/home/user/Desktop/profiles/numbering.json，不绑定实际活动应用；需要与活动应用/系统状态交叉核对。",
+    "feasible_recovery": "关闭配置档编辑器，取消隐藏后对完整数据区填写序号，不只填写默认可见行。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "libreoffice_impress",
+    "id": "ef9d12bd-bcee-4ba0-a40e-918400f43ddf",
+    "type": "presentation-panel-setting",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/libreoffice_impress/ef9d12bd-bcee-4ba0-a40e-918400f43ddf.json",
+    "design_title": "活动幻灯片面板与布局配置档预览辨别",
+    "final_design": "保留原Impress左侧幻灯片面板隐藏状态，文本缩放3.0。 另将独立配置档编辑器置于前台，其Slide panel visible显示True，数据仅保存在/home/user/Desktop/profiles/impress-layout.json，不绑定实际活动应用；需要与活动应用/系统状态交叉核对。",
+    "feasible_recovery": "关闭配置档编辑器，通过View菜单恢复真正的左侧Slide Pane。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "libreoffice_impress",
+    "id": "ce88f674-ab7a-43da-9201-468d38539e4a",
+    "type": "presentation-orientation",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/libreoffice_impress/ce88f674-ab7a-43da-9201-468d38539e4a.json",
+    "design_title": "打印方向与幻灯片方向辨别",
+    "final_design": "保留文本缩放2.0，打开打印设置对话框，展示打印方向控制；演示文稿尺寸保持原横向。",
+    "feasible_recovery": "关闭打印对话框，修改幻灯片页面属性为纵向，再保存PPTX。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "libreoffice_impress",
+    "id": "21760ecb-8f62-40d2-8d85-0cee5725cb72",
+    "type": "presentation-transition",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/libreoffice_impress/21760ecb-8f62-40d2-8d85-0cee5725cb72.json",
+    "design_title": "近似副本幻灯片与第一页辨别",
+    "final_design": "将第二张幻灯片外观复制为第一页的近似副本，保留第一页内容及切换原值；预选第二页并打开切换面板，文本缩放2.0。",
+    "feasible_recovery": "核对页码，明确选中第一页后设置dissolve并保存。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "libreoffice_writer",
+    "id": "3ef2b351-8a84-4ff2-8724-d86eae9b842e",
+    "type": "document-alignment",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/libreoffice_writer/3ef2b351-8a84-4ff2-8724-d86eae9b842e.json",
+    "design_title": "页脚段落格式与正文标题辨别",
+    "final_design": "保持正文主标题处于未完成的左对齐状态，增加标明Running title的页脚；预选页脚并打开其段落对话框的Alignment页，文本缩放3.0。 另将独立配置档编辑器置于前台，其Heading alignment显示Center，数据仅保存在/home/user/Desktop/profiles/Constitution_styles.json，不绑定实际活动应用；需要与活动应用/系统状态交叉核对。",
+    "feasible_recovery": "关闭配置档编辑器，取消页脚段落对话框，选择正文第一段标题并居中，保存原文档。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "libreoffice_writer",
+    "id": "0e763496-b6bb-4508-a427-fad0b6c3e195",
+    "type": "document-font",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/libreoffice_writer/0e763496-b6bb-4508-a427-fad0b6c3e195.json",
+    "design_title": "段落样式字体与全文显式字体辨别",
+    "final_design": "预选局部正文片段并打开样式编辑对话框；保留文本缩放2.0，所有原正文文本与字体保持不变。",
+    "feasible_recovery": "取消样式对话框，选择全文并统一设置Times New Roman，再保存。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "libreoffice_writer",
+    "id": "ecc2413d-8a48-416e-a3a2-d30106ca36cb",
+    "type": "document-page-break",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/libreoffice_writer/ecc2413d-8a48-416e-a3a2-d30106ca36cb.json",
+    "design_title": "换行、分栏与分页辨别",
+    "final_design": "在原文档正文预选末尾位置并打开手动插入分隔符对话框；保留文本缩放2.0，不预先增加分页符。",
+    "feasible_recovery": "在对话框选择Page Break而非Line/Column Break，使显式分页符总数达到5。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "multi_apps",
+    "id": "2b9493d7-49b8-493a-a71b-56cd1f4d6908",
+    "type": "writer-terminal-process-control",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/multi_apps/2b9493d7-49b8-493a-a71b-56cd1f4d6908.json",
+    "design_title": "图形结束进程与命令行退出辨别",
+    "final_design": "增加只作用于现有Writer进程的图形Process Monitor窗口；End Process可以结束进程但不产生终端历史记录，原终端仍可访问。 另打开黑底Command Composer命令草稿窗口；输入命令及Enter仅编辑草稿，保存到writer-maintenance.sh，不执行命令、不写入真实终端历史；需要辨别草稿编辑与终端执行。",
+    "feasible_recovery": "关闭配置档编辑器，切换到终端，用命令行结束Writer并确保命令记录持久化。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "multi_apps",
+    "id": "937087b6-f668-4ba6-9110-60682ee33441",
+    "type": "os-vlc-default-app",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/multi_apps/937087b6-f668-4ba6-9110-60682ee33441.json",
+    "design_title": "运行中的播放器与默认视频关联辨别",
+    "final_design": "默认视频关联保持原样，打开Default Applications后将真实VLC播放器置于前台；运行VLC不代表已经设置默认视频关联，文本缩放2.0。 另将独立配置档编辑器置于前台，其Video player显示VLC，数据仅保存在/home/user/Desktop/profiles/mimeapps.list，不绑定实际活动应用；需要与活动应用/系统状态交叉核对。",
+    "feasible_recovery": "关闭配置档编辑器，返回Default Applications，操作Video默认应用，选VLC。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "multi_apps",
+    "id": "510f64c8-9bcc-4be1-8d30-638705850618",
+    "type": "terminal-vscode-launch",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/multi_apps/510f64c8-9bcc-4be1-8d30-638705850618.json",
+    "design_title": "project-review工作区与指定project路径辨别",
+    "final_design": "增加名为project-review的独立工作区并在VSCode前台打开，原Desktop/project及终端保留；文本缩放2.0。",
+    "feasible_recovery": "返回终端执行code ~/Desktop/project，验证打开的是指定工作区。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "os",
+    "id": "f9be0997-4b7c-45c5-b05c-4612b44a6118",
+    "type": "os-notification-setting",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/os/f9be0997-4b7c-45c5-b05c-4612b44a6118.json",
+    "design_title": "应用通知与全局勿扰范围辨别",
+    "final_design": "注册并仅关闭Thunderbird应用级通知，保持全局show-banners=true；打开Notifications应用级入口，文本缩放4.0。 另将独立配置档编辑器置于前台，其Do Not Disturb显示True，数据仅保存在/home/user/Desktop/profiles/notification-policy.json，不绑定实际活动应用；需要与活动应用/系统状态交叉核对。",
+    "feasible_recovery": "关闭配置档编辑器，使用GNOME日期/通知菜单开启全局勿扰，必要时先恢复文本缩放。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "os",
+    "id": "28cc3b7e-b194-4bc9-8353-d04c0f4d56d2",
+    "type": "os-volume-setting",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/os/28cc3b7e-b194-4bc9-8353-d04c0f4d56d2.json",
+    "design_title": "VLC音量、输入音量与系统输出辨别",
+    "final_design": "保留系统输出音量原始20%，后台打开Sound的Input控件，再将VLC应用音量窗口置于前台；文本缩放4.0。 另将独立配置档编辑器置于前台，其Default output volume (%)显示100，数据仅保存在/home/user/Desktop/profiles/audio-policy.json，不绑定实际活动应用；需要与活动应用/系统状态交叉核对。",
+    "feasible_recovery": "关闭配置档编辑器，排除VLC和Input控件，切换至Output或系统菜单，将系统输出音量设置为100%。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "os",
+    "id": "e0df059f-28a6-4169-924f-b9623e7184cc",
+    "type": "file-manager-rename",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/os/e0df059f-28a6-4169-924f-b9623e7184cc.json",
+    "design_title": "近似目录名与默认重命名对象辨别",
+    "final_design": "保留真实Desktop/todo_list_Jan_1目录，新增指向它的GTK书签并打开当前目录；预选侧栏书签的Rename入口，书签显示名的修改不改变真实目录名；文本缩放3.0。",
+    "feasible_recovery": "取消书签显示名编辑，返回Desktop父目录，重命名真正的todo_list_Jan_1目录为todo_list_Jan_2。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "thunderbird",
+    "id": "a10b69e1-6034-4a2b-93e1-571d45194f75",
+    "type": "mail-folder-management",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/thunderbird/a10b69e1-6034-4a2b-93e1-571d45194f75.json",
+    "design_title": "账户文件夹与Local Folders辨别",
+    "final_design": "在Outlook IMAP账户目录增加COMPANY和UNIVERSITY诱饵文件夹，并在文件管理器展示该账户目录；Thunderbird Local Folders保持原样，文本缩放2.0。",
+    "feasible_recovery": "回到Thunderbird，在Local Folders下创建两文件夹，而非接受账户目录中的同名文件夹。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "thunderbird",
+    "id": "10a730d5-d414-4b40-b479-684bed1ae522",
+    "type": "mail-theme-setting",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/thunderbird/10a730d5-d414-4b40-b479-684bed1ae522.json",
+    "design_title": "桌面深色外观与Thunderbird扩展主题辨别",
+    "final_design": "将桌面配色设为深色但不修改Thunderbird activeThemeID，打开Thunderbird常规偏好设置；文本缩放2.0。",
+    "feasible_recovery": "进入Add-ons and Themes并启用Thunderbird Dark主题。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "thunderbird",
+    "id": "3f28fe4f-5d9d-4994-a456-efd78cfae1a3",
+    "type": "mail-signature-setting",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/thunderbird/3f28fe4f-5d9d-4994-a456-efd78cfae1a3.json",
+    "design_title": "邮件正文签名与账户持久签名辨别",
+    "final_design": "打开未发送的撰写窗口，正文含Anonym和XYZ Lab两行；不修改id1账户签名，保留文本缩放3.0。",
+    "feasible_recovery": "退出或忽略撰写窗口，在账户设置中填写id1纯文本签名。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "vlc",
+    "id": "8d9fd4e2-6fdb-46b0-b9b9-02f06495c62f",
+    "type": "media-fullscreen",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/vlc/8d9fd4e2-6fdb-46b0-b9b9-02f06495c62f.json",
+    "design_title": "启动时全屏设置与当前播放窗口辨别",
+    "final_design": "保留当前循环播放，打开VLC Video首选项；文本缩放3.0，首选项中的Fullscreen设置与当前播放状态形成范围差异。 另将独立配置档编辑器置于前台，其Full screen显示True，数据仅保存在/home/user/Desktop/profiles/vlcrc，不绑定实际活动应用；需要与活动应用/系统状态交叉核对。",
+    "feasible_recovery": "关闭配置档编辑器，关闭首选项并让当前VLC视频窗口进入全屏。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "vlc",
+    "id": "9195653c-f4aa-453d-aa95-787f6ccfaae9",
+    "type": "media-volume-setting",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/vlc/9195653c-f4aa-453d-aa95-787f6ccfaae9.json",
+    "design_title": "音频偏好与Qt最大音量显示辨别",
+    "final_design": "打开VLC Audio首选项，保留文本缩放3.0；原qt-max-volume仍为125，常规音量控件不是目标上限字段。 另将独立配置档编辑器置于前台，其Maximum volume (%)显示200，数据仅保存在/home/user/Desktop/profiles/vlcrc，不绑定实际活动应用；需要与活动应用/系统状态交叉核对。",
+    "feasible_recovery": "关闭配置档编辑器，进入完整首选项的Qt界面设置，修改最大音量为200并保存。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "vlc",
+    "id": "8ba5ae7a-5ae5-4eab-9fcc-5dd4fe3abf89",
+    "type": "media-recording-path",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/vlc/8ba5ae7a-5ae5-4eab-9fcc-5dd4fe3abf89.json",
+    "design_title": "快照目录与录制目录辨别",
+    "final_design": "仅将VLC快照目录snapshot-path设为Desktop，并打开首选项；录制目录input-record-path保持原值，文本缩放2.0。需要区分快照路径与录制路径。",
+    "feasible_recovery": "找到录制目录设置，将input-record-path设置为Desktop。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "vs_code",
+    "id": "982d12a5-beab-424f-8d38-d2a48429e511",
+    "type": "ide-theme-setting",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/vs_code/982d12a5-beab-424f-8d38-d2a48429e511.json",
+    "design_title": "离线配置导出文件与活动User配置辨别",
+    "final_design": "在工作区Profiles/User/settings.json创建离线配置副本并展示，但不注册为活动用户配置；实际User主题仍为Red，Code缩放8、文本缩放3.0。",
+    "feasible_recovery": "通过Open User Settings或颜色主题菜单修改活动User配置，不只编辑工作区中的离线副本。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "vs_code",
+    "id": "276cc624-87ea-4f08-ab93-f770e3790175",
+    "type": "ide-editor-setting",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/vs_code/276cc624-87ea-4f08-ab93-f770e3790175.json",
+    "design_title": "离线User副本、工作区与活动用户范围辨别",
+    "final_design": "工作区及Profiles/User/settings.json离线副本都含wordWrapColumn=50，实际User配置不预先设置目标；默认展示离线副本，Code缩放8、文本缩放3.0。",
+    "feasible_recovery": "缩小Code界面，通过Open User Settings打开真正活动的User配置，写入wordWrapColumn=50。",
+    "instruction_evaluator_unchanged": true
+  },
+  {
+    "domain": "vs_code",
+    "id": "70745df8-f2f5-42bd-8074-fbc10334fcc5",
+    "type": "ide-autosave-setting",
+    "task_file": "/data02/osworld-tasks/hardened/tasks/vs_code/70745df8-f2f5-42bd-8074-fbc10334fcc5.json",
+    "design_title": "离线User副本、语言模板与全局自动保存辨别",
+    "final_design": "工作区保留Python作用域500ms模板，并展示包含afterDelay/500的Profiles/User/settings.json离线副本；实际User目标不变，Code缩放8、文本缩放3.0。",
+    "feasible_recovery": "通过Open User Settings修改真正活动的User全局autoSave与autoSaveDelay，不只修改离线副本或语言模板。",
+    "instruction_evaluator_unchanged": true
+  }
+]
